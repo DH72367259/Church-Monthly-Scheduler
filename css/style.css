@@ -1,0 +1,730 @@
+/* ─── Church Schedule — Stylesheet ──────────────────────────────────────── */
+
+/* Reset & base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --blue:      #1a56db;
+  --blue-dark: #1447c0;
+  --blue-light:#eff6ff;
+  --blue-mid:  #dbeafe;
+  --gray-bg:   #f3f4f6;
+  --gray-50:   #f9fafb;
+  --gray-100:  #f3f4f6;
+  --gray-200:  #e5e7eb;
+  --gray-400:  #9ca3af;
+  --gray-600:  #6b7280;
+  --gray-700:  #374151;
+  --gray-900:  #111827;
+  --white:     #ffffff;
+  --shadow:    0 1px 4px rgba(0,0,0,.1);
+  --radius:    14px;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--gray-bg);
+  color: var(--gray-900);
+  -webkit-text-size-adjust: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+#app {
+  max-width: 640px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Header ──────────────────────────────────────────────────────────────── */
+.app-header {
+  background: var(--blue);
+  color: var(--white);
+  padding: env(safe-area-inset-top, 12px) 16px 14px;
+  padding-top: max(env(safe-area-inset-top, 0px), 14px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  user-select: none;
+}
+
+.header-logo {
+  font-size: 22px;
+  opacity: .85;
+}
+
+.app-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -.3px;
+  line-height: 1.1;
+}
+
+.app-subtitle {
+  font-size: 12px;
+  opacity: .8;
+  margin-top: 1px;
+  font-weight: 400;
+}
+
+/* ─── Tab bar ─────────────────────────────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  background: var(--white);
+  border-bottom: 2px solid var(--gray-200);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 14px 8px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-600);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: color .18s, border-color .18s;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.tab-btn.active {
+  color: var(--blue);
+  border-bottom-color: var(--blue);
+  font-weight: 700;
+}
+
+.tab-btn:not(.active):active {
+  background: var(--gray-100);
+}
+
+/* ─── Content area ────────────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  padding: 14px 14px 32px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ─── Month navigator ─────────────────────────────────────────────────────── */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 11px 14px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+
+.month-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-900);
+  text-align: center;
+  flex: 1;
+}
+
+.nav-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--blue-light);
+  color: var(--blue);
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.nav-btn:hover  { background: var(--blue-mid); }
+.nav-btn:active { background: #bfdbfe; }
+.nav-btn:disabled {
+  opacity: .28;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ─── Notice / info card ──────────────────────────────────────────────────── */
+.notice-card {
+  background: #fef9c3;
+  border-left: 3px solid #f59e0b;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #78350f;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+/* ─── Sunday service card ─────────────────────────────────────────────────── */
+.service-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.service-header {
+  background: var(--blue);
+  color: var(--white);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.service-time {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.service-location {
+  font-size: 12px;
+  opacity: .85;
+  font-weight: 400;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Thin scrollbar on desktop */
+.table-scroll::-webkit-scrollbar { height: 4px; }
+.table-scroll::-webkit-scrollbar-track { background: transparent; }
+.table-scroll::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
+
+.schedule-table {
+  width: 100%;
+  min-width: 380px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.schedule-table thead th {
+  background: var(--gray-50);
+  color: var(--gray-700);
+  font-weight: 600;
+  padding: 9px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--gray-200);
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.schedule-table thead th.role-col {
+  text-align: left;
+  min-width: 110px;
+  padding-left: 12px;
+}
+
+.schedule-table td {
+  padding: 9px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--gray-100);
+  color: var(--gray-700);
+  font-size: 13px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.schedule-table td.role-cell {
+  text-align: left;
+  font-weight: 600;
+  color: var(--gray-900);
+  background: var(--gray-50);
+  padding-left: 12px;
+  white-space: normal;
+  min-width: 110px;
+  border-right: 1px solid var(--gray-200);
+}
+
+.schedule-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.schedule-table tbody tr:hover td {
+  background: #f0f7ff;
+}
+
+.schedule-table tbody tr:hover td.role-cell {
+  background: #e8f1ff;
+}
+
+/* Empty cell – show dash with lower opacity */
+.empty-cell {
+  color: var(--gray-400);
+}
+
+/* ─── Tuesday prayer card ─────────────────────────────────────────────────── */
+.tuesday-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.tuesday-header {
+  background: var(--blue);
+  color: var(--white);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prayer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.prayer-table thead th {
+  background: var(--gray-50);
+  color: var(--gray-700);
+  font-weight: 600;
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.prayer-table thead th:first-child {
+  width: 30px;
+  text-align: center;
+}
+
+.prayer-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--gray-100);
+  vertical-align: middle;
+  color: var(--gray-700);
+}
+
+.prayer-table td:first-child {
+  text-align: center;
+  width: 30px;
+}
+
+.prayer-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.slot-num {
+  width: 26px;
+  height: 26px;
+  background: var(--blue-light);
+  color: var(--blue);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.slot-name {
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.slot-area {
+  color: var(--gray-600);
+}
+
+.slot-pastor {
+  color: var(--blue);
+  font-size: 12px;
+}
+
+.prayer-table tbody tr:hover td {
+  background: #f0f7ff;
+}
+
+/* ─── Loading ─────────────────────────────────────────────────────────────── */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 14px;
+  color: var(--gray-600);
+  font-size: 15px;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--gray-200);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Error card ──────────────────────────────────────────────────────────── */
+.error-card {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius);
+  padding: 20px 16px;
+  text-align: center;
+  color: #991b1b;
+}
+
+.error-card strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.error-card p {
+  font-size: 13px;
+  color: #b91c1c;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+/* ─── Empty state ─────────────────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--gray-400);
+}
+
+.empty-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+
+.empty-state p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ─── Retry button ────────────────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px;
+  background: var(--blue);
+  color: var(--white);
+  border: none;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s;
+}
+
+.btn-primary:active {
+  background: var(--blue-dark);
+}
+
+/* ─── Swipe hint ──────────────────────────────────────────────────────────── */
+.hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--gray-400);
+  padding: 6px 0 10px;
+  user-select: none;
+}
+
+/* ─── Special Days tab button ────────────────────────────────────────────── */
+.tab-btn-special {
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+.tab-btn-special.active {
+  color: #7c3aed;
+  border-bottom-color: #7c3aed;
+}
+
+/* Disabled state — greyed out, not clickable */
+.tab-btn.disabled {
+  color: var(--gray-400) !important;
+  border-bottom-color: transparent !important;
+  cursor: not-allowed;
+  pointer-events: none;
+  font-weight: 400;
+  opacity: 0.55;
+}
+
+/* ─── Special event card ──────────────────────────────────────────────────── */
+.special-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  border-top: 4px solid #7c3aed;
+}
+
+.special-header {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  color: var(--white);
+  padding: 14px 16px 12px;
+}
+
+.special-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.special-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -.3px;
+}
+
+.special-day-badge {
+  background: rgba(255,255,255,.25);
+  color: var(--white);
+  padding: 2px 10px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.special-date {
+  font-size: 13px;
+  opacity: .88;
+  font-weight: 500;
+}
+
+/* Program details table inside a special card */
+.sp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.sp-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--gray-100);
+  vertical-align: middle;
+}
+
+.sp-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sp-table .sp-label {
+  font-weight: 600;
+  color: var(--gray-700);
+  width: 38%;
+  white-space: nowrap;
+}
+
+.sp-table .sp-value {
+  color: var(--gray-900);
+}
+
+.sp-table tr:hover td {
+  background: #faf5ff;
+}
+
+/* Notes strip at the bottom of a special card */
+.special-notes {
+  background: #faf5ff;
+  border-top: 1px solid #e9d5ff;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #6b21a8;
+  line-height: 1.5;
+}
+
+/* ─── Archive banner ──────────────────────────────────────────────────────── */
+.archive-banner {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #92400e;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-note {
+  font-weight: 400;
+  color: #b45309;
+  font-size: 12px;
+}
+
+/* ─── Role badges in month nav ────────────────────────────────────────────── */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 50px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 8px;
+  letter-spacing: .4px;
+  vertical-align: middle;
+}
+
+.admin-badge  { background: #fde68a; color: #92400e; }
+.viewer-badge { background: #d1fae5; color: #065f46; }
+
+/* ─── PIN modal ───────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 24px;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-box {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 28px 24px 22px;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  text-align: center;
+  animation: slideUp .22s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal-icon {
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 6px;
+}
+
+.modal-desc {
+  font-size: 13px;
+  color: var(--gray-600);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.pin-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pin-input {
+  flex: 1;
+  padding: 12px 14px;
+  border: 2px solid var(--gray-200);
+  border-radius: 12px;
+  font-size: 20px;
+  letter-spacing: 6px;
+  text-align: center;
+  outline: none;
+  color: var(--gray-900);
+  -webkit-text-security: disc; /* iOS disc mask */
+  transition: border-color .15s;
+}
+
+.pin-input:focus {
+  border-color: var(--blue);
+}
+
+.pin-submit {
+  padding: 12px 18px;
+  background: var(--blue);
+  color: var(--white);
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+}
+
+.pin-submit:active { background: var(--blue-dark); }
+
+.pin-error {
+  color: #dc2626;
+  font-size: 13px;
+  min-height: 18px;
+  margin-bottom: 12px;
+}
+
+.pin-cancel {
+  background: none;
+  border: none;
+  color: var(--gray-600);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px;
+  text-decoration: underline;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── Responsive tweaks ───────────────────────────────────────────────────── */
+@media (min-width: 480px) {
+  .content { padding: 18px 18px 40px; }
+  .schedule-table { font-size: 14px; }
+  .prayer-table   { font-size: 14px; }
+}

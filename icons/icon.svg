@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background rounded rect -->
+  <rect width="512" height="512" rx="96" fill="#1a56db"/>
+
+  <!-- Open book shape -->
+  <g fill="none" stroke="#ffffff" stroke-width="20" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Left page -->
+    <path d="M256 155 C200 145 140 150 100 165 L100 360 C140 345 200 340 256 355 Z" fill="rgba(255,255,255,0.15)" stroke="#ffffff"/>
+    <!-- Right page -->
+    <path d="M256 155 C312 145 372 150 412 165 L412 360 C372 345 312 340 256 355 Z" fill="rgba(255,255,255,0.15)" stroke="#ffffff"/>
+    <!-- Spine -->
+    <line x1="256" y1="155" x2="256" y2="355"/>
+  </g>
+
+  <!-- Cross on top -->
+  <rect x="243" y="85"  width="26" height="80" rx="5" fill="#ffffff"/>
+  <rect x="215" y="105" width="82" height="26" rx="5" fill="#ffffff"/>
+
+  <!-- App name text -->
+  <text x="256" y="420" font-family="-apple-system, Arial, sans-serif" font-size="42"
+        font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="-1">
+    SCHEDULE
+  </text>
+</svg>

@@ -1,0 +1,140 @@
+[
+  {
+    "month": "March 2026",
+    "monthKey": "2026-03",
+    "notes": "",
+    "tuesdays": [
+      {
+        "date": "March 3, 2026",
+        "slots": [
+          { "name": "Darshan",    "area": "Kachohally",     "pastor": "Mohan" },
+          { "name": "Nalini",     "area": "Girigowdana",    "pastor": "Anand" },
+          { "name": "Jude",       "area": "Whitefield",     "pastor": "Saravanan" },
+          { "name": "Girisha",    "area": "Marathahalli",   "pastor": "John" }
+        ]
+      },
+      {
+        "date": "March 10, 2026",
+        "slots": [
+          { "name": "Anand",      "area": "Kachohally",     "pastor": "Mohan" },
+          { "name": "Raju",       "area": "Girigowdana",    "pastor": "Anand" },
+          { "name": "Deepa",      "area": "Whitefield",     "pastor": "Saravanan" },
+          { "name": "Pradeep",    "area": "Marathahalli",   "pastor": "John" }
+        ]
+      },
+      {
+        "date": "March 17, 2026",
+        "slots": [
+          { "name": "Saravanan",  "area": "Kachohally",     "pastor": "Mohan" },
+          { "name": "Mohan",      "area": "Girigowdana",    "pastor": "Anand" },
+          { "name": "Rajesh",     "area": "Whitefield",     "pastor": "Saravanan" },
+          { "name": "Mudi",       "area": "Marathahalli",   "pastor": "John" }
+        ]
+      },
+      {
+        "date": "March 24, 2026",
+        "slots": [
+          { "name": "John",       "area": "Kachohally",     "pastor": "Mohan" },
+          { "name": "Mudialba",   "area": "Girigowdana",    "pastor": "Anand" },
+          { "name": "Nalini",     "area": "Whitefield",     "pastor": "Saravanan" },
+          { "name": "Darshan",    "area": "Marathahalli",   "pastor": "John" }
+        ]
+      },
+      {
+        "date": "March 31, 2026",
+        "slots": [
+          { "name": "Girisha",    "area": "Kachohally",     "pastor": "Mohan" },
+          { "name": "Pas.Anand",  "area": "Girigowdana",    "pastor": "Anand" },
+          { "name": "Jude",       "area": "Whitefield",     "pastor": "Saravanan" },
+          { "name": "Deepa",      "area": "Marathahalli",   "pastor": "John" }
+        ]
+      }
+    ]
+  },
+  {
+    "month": "April 2026",
+    "monthKey": "2026-04",
+    "notes": "No Tuesday prayer on Apr 3 (Good Friday week).",
+    "tuesdays": [
+      {
+        "date": "April 7, 2026",
+        "slots": [
+          { "name": "John",       "area": "Kachohally",     "pastor": "Mohan" },
+          { "name": "Nalini",     "area": "Girigowdana",    "pastor": "Anand" },
+          { "name": "Rajesh",     "area": "Whitefield",     "pastor": "Saravanan" },
+          { "name": "Deepa",      "area": "Marathahalli",   "pastor": "Jude" }
+        ]
+      },
+      {
+        "date": "April 14, 2026",
+        "slots": [
+          { "name": "Darshan",    "area": "Kachohally",     "pastor": "Mohan" },
+          { "name": "Anand",      "area": "Girigowdana",    "pastor": "Anand" },
+          { "name": "Pradeep",    "area": "Whitefield",     "pastor": "Saravanan" },
+          { "name": "Mudi",       "area": "Marathahalli",   "pastor": "Jude" }
+        ]
+      },
+      {
+        "date": "April 21, 2026",
+        "slots": [
+          { "name": "Saravanan",  "area": "Kachohally",     "pastor": "Mohan" },
+          { "name": "Mohan",      "area": "Girigowdana",    "pastor": "Anand" },
+          { "name": "Raju",       "area": "Whitefield",     "pastor": "Saravanan" },
+          { "name": "Girisha",    "area": "Marathahalli",   "pastor": "Jude" }
+        ]
+      },
+      {
+        "date": "April 28, 2026",
+        "slots": [
+          { "name": "Jude",       "area": "Kachohally",     "pastor": "Mohan" },
+          { "name": "Mudialba",   "area": "Girigowdana",    "pastor": "Anand" },
+          { "name": "Pas.Anand",  "area": "Whitefield",     "pastor": "Saravanan" },
+          { "name": "John",       "area": "Marathahalli",   "pastor": "Jude" }
+        ]
+      }
+    ]
+  },
+  {
+    "month": "May 2026",
+    "monthKey": "2026-05",
+    "notes": "",
+    "tuesdays": [
+      {
+        "date": "May 5, 2026",
+        "slots": [
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" }
+        ]
+      },
+      {
+        "date": "May 12, 2026",
+        "slots": [
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" }
+        ]
+      },
+      {
+        "date": "May 19, 2026",
+        "slots": [
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" }
+        ]
+      },
+      {
+        "date": "May 26, 2026",
+        "slots": [
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" },
+          { "name": "", "area": "", "pastor": "" }
+        ]
+      }
+    ]
+  }
+]

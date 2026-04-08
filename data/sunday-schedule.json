@@ -1,0 +1,125 @@
+[
+  {
+    "month": "March 2026",
+    "monthKey": "2026-03",
+    "notes": "Good Friday – Apr 3. Easter service at 7 AM (timing shifted to 10 AM).",
+    "services": [
+      {
+        "time": "Sun 7:00 AM",
+        "location": "Kachohally",
+        "programs": [
+          { "role": "Incharge",       "weeks": ["Mohan",   "Mohan",    "Mohan",    "Mohan",   "Mohan"] },
+          { "role": "Choir",          "weeks": ["Darshan", "Saravanan","Mohan",    "Nalini",  "John"] },
+          { "role": "Praise Worship", "weeks": ["Jude",    "Saravanan","Nalini",   "Nalini",  "Nalini"] },
+          { "role": "Sermon By",      "weeks": ["Girisha", "Pas.Anand","Raju",     "Deepa",   "John"] },
+          { "role": "Translation",    "weeks": ["Darshan", "Darshan",  "Mudi",     "Mudialba","Mudi"] },
+          { "role": "Preaching",      "weeks": ["Mohan",   "Mohan",    "Mohan",    "Pradeep", "Mohan"] }
+        ]
+      },
+      {
+        "time": "Sun 9:00 AM",
+        "location": "Kachohally",
+        "programs": [
+          { "role": "Incharge",       "weeks": ["John",    "Darshan",  "Mohan",    "Rajesh",  ""] },
+          { "role": "Choir",          "weeks": ["Jude",    "Darshan",  "Nalini",   "Nalini",  ""] },
+          { "role": "Praise Worship", "weeks": ["Girisha", "Pas.Anand","Nalini",   "Deepa",   ""] },
+          { "role": "Sermon By",      "weeks": ["John",    "Anand",    "Nalini",   "Deepa",   "John"] },
+          { "role": "Translation",    "weeks": ["Darshan", "Darshan",  "Mudi",     "Mudialba","Mudi"] },
+          { "role": "Preaching",      "weeks": ["Mohan",   "Mohan",    "Mohan",    "Pradeep", "Mohan"] }
+        ]
+      },
+      {
+        "time": "Sun 9:30 AM",
+        "location": "Girigowdana",
+        "programs": [
+          { "role": "Incharge",       "weeks": ["Mohan",      "John",       "Mohan",     "Mohan",      "John"] },
+          { "role": "Translation",    "weeks": ["sis.Nalina", "sis.Nalina", "sis.Nalina","Ms.Nalina",  "Ms.Nalina"] },
+          { "role": "Sermon By",      "weeks": ["Mudi",       "Mudi",       "Mudi",      "Mudi",       "Mudi"] },
+          { "role": "Preaching",      "weeks": ["Mohan",      "Mohan",      "Mohan",     "Mohan",      "Mohan"] }
+        ]
+      }
+    ]
+  },
+  {
+    "month": "April 2026",
+    "monthKey": "2026-04",
+    "notes": "Easter Sunday – Apr 5 (service at 10 AM). Good Friday service Apr 3 at 7 AM.",
+    "services": [
+      {
+        "time": "Sun 7:00 AM",
+        "location": "Kachohally",
+        "programs": [
+          { "role": "Incharge",       "weeks": ["Mohan",   "Anand",    "Raju",    "Raja"] },
+          { "role": "Choir",          "weeks": ["Mohan",   "Saravanan","Mohan",   "John"] },
+          { "role": "Praise Worship", "weeks": ["Anand",   "MUDIALBA", "deepa",   "Nalini"] },
+          { "role": "Sermon By",      "weeks": ["Anand",   "Saravanan","Mohan",   "Raju"] },
+          { "role": "Translation",    "weeks": ["Darshan", "Darshan",  "Nalini",  "Mudi"] },
+          { "role": "Preaching",      "weeks": ["Mohan",   "Mohan",    "Mohan",   "Mohan"] }
+        ]
+      },
+      {
+        "time": "Sun 9:00 AM",
+        "location": "Kachohally",
+        "programs": [
+          { "role": "Incharge",       "weeks": ["Darshan", "Mohan",    "Darshan",  "Mohan"] },
+          { "role": "Choir",          "weeks": ["Jude",    "Anand",    "Nalini",   "Pradeep"] },
+          { "role": "Praise Worship", "weeks": ["Pas.Anand","MUDIALBA","Pas.Anand","Rajesh"] },
+          { "role": "Sermon By",      "weeks": ["Anand",   "Saravanan","John",     "Deepa"] },
+          { "role": "Translation",    "weeks": ["Anand",   "Nalini",   "Nalini",   "Mudi"] },
+          { "role": "Preaching",      "weeks": ["Mohan",   "Mohan",    "Mohan",    "Mohan"] }
+        ]
+      },
+      {
+        "time": "Sun 9:30 AM",
+        "location": "Girigowdana",
+        "programs": [
+          { "role": "Incharge",       "weeks": ["Mohan",      "John",       "Mohan",     "Mohan"] },
+          { "role": "Translation",    "weeks": ["sis.Nalina", "sis.Nalina", "sis.Nalina","Ms.Nalina"] },
+          { "role": "Sermon By",      "weeks": ["Mudi",       "Mudi",       "Mudi",      "Mudi"] },
+          { "role": "Preaching",      "weeks": ["Mohan",      "Mohan",      "Mohan",     "Mohan"] }
+        ]
+      }
+    ]
+  },
+  {
+    "month": "May 2026",
+    "monthKey": "2026-05",
+    "notes": "",
+    "services": [
+      {
+        "time": "Sun 7:00 AM",
+        "location": "Kachohally",
+        "programs": [
+          { "role": "Incharge",       "weeks": ["", "", "", "", ""] },
+          { "role": "Choir",          "weeks": ["", "", "", "", ""] },
+          { "role": "Praise Worship", "weeks": ["", "", "", "", ""] },
+          { "role": "Sermon By",      "weeks": ["", "", "", "", ""] },
+          { "role": "Translation",    "weeks": ["", "", "", "", ""] },
+          { "role": "Preaching",      "weeks": ["", "", "", "", ""] }
+        ]
+      },
+      {
+        "time": "Sun 9:00 AM",
+        "location": "Kachohally",
+        "programs": [
+          { "role": "Incharge",       "weeks": ["", "", "", "", ""] },
+          { "role": "Choir",          "weeks": ["", "", "", "", ""] },
+          { "role": "Praise Worship", "weeks": ["", "", "", "", ""] },
+          { "role": "Sermon By",      "weeks": ["", "", "", "", ""] },
+          { "role": "Translation",    "weeks": ["", "", "", "", ""] },
+          { "role": "Preaching",      "weeks": ["", "", "", "", ""] }
+        ]
+      },
+      {
+        "time": "Sun 9:30 AM",
+        "location": "Girigowdana",
+        "programs": [
+          { "role": "Incharge",    "weeks": ["", "", "", "", ""] },
+          { "role": "Translation", "weeks": ["", "", "", "", ""] },
+          { "role": "Sermon By",   "weeks": ["", "", "", "", ""] },
+          { "role": "Preaching",   "weeks": ["", "", "", "", ""] }
+        ]
+      }
+    ]
+  }
+]
