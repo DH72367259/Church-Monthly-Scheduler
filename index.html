@@ -79,18 +79,16 @@
         Archived months are read-only.<br>
         Enter your PIN to view past schedules.
       </p>
-      <div class="pin-row">
-        <input class="pin-input"
-               id="pin-input"
-               type="password"
-               inputmode="numeric"
-               maxlength="6"
-               placeholder="••••"
-               autocomplete="off"
-               aria-label="Enter PIN" />
-        <button class="pin-submit" onclick="submitPin()">View</button>
-      </div>
+      <input class="pin-input"
+             id="pin-input"
+             type="password"
+             inputmode="numeric"
+             maxlength="6"
+             placeholder="••••"
+             autocomplete="off"
+             aria-label="Enter PIN" />
       <p class="pin-error" id="pin-error" aria-live="polite"></p>
+      <button class="pin-submit" onclick="submitPin()">Proceed</button>
       <button class="pin-cancel" onclick="cancelPin()">Cancel</button>
     </div>
   </div>

@@ -635,6 +635,8 @@ body {
   padding: 28px 24px 22px;
   width: 100%;
   max-width: 340px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 12px 40px rgba(0,0,0,.25);
   text-align: center;
   animation: slideUp .22s ease;
@@ -664,25 +666,21 @@ body {
   line-height: 1.5;
 }
 
-.pin-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
 .pin-input {
-  flex: 1;
-  padding: 12px 14px;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px;
   border: 2px solid var(--gray-200);
   border-radius: 12px;
-  font-size: 20px;
-  letter-spacing: 6px;
+  font-size: 24px;
+  letter-spacing: 8px;
   text-align: center;
   outline: none;
   color: var(--gray-900);
-  -webkit-text-security: disc; /* iOS disc mask */
+  -webkit-text-security: disc;
   transition: border-color .15s;
+  margin-bottom: 8px;
 }
 
 .pin-input:focus {
@@ -690,16 +688,18 @@ body {
 }
 
 .pin-submit {
-  padding: 12px 18px;
+  display: block;
+  width: 100%;
+  padding: 14px;
   background: var(--blue);
   color: var(--white);
   border: none;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
-  white-space: nowrap;
   transition: background .15s;
+  margin-bottom: 14px;
 }
 
 .pin-submit:active { background: var(--blue-dark); }

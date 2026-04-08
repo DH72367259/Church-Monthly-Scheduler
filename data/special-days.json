@@ -8,26 +8,14 @@
         "day": "Friday",
         "title": "Good Friday",
         "time": "7:00 AM",
-        "location": "Kachohally",
-        "incharge": "Mohan",
-        "preaching": "Pastor John",
-        "choir": "Darshan",
-        "praiseWorship": "Anand",
-        "translation": "Darshan",
-        "notes": "Fasting prayer service. Please arrive early."
+        "location": "Kachohally"
       },
       {
         "date": "April 5, 2026",
         "day": "Sunday",
         "title": "Easter Sunday",
         "time": "10:00 AM",
-        "location": "Kachohally",
-        "incharge": "Mohan",
-        "preaching": "Pastor Mohan",
-        "choir": "Saravanan",
-        "praiseWorship": "MUDIALBA",
-        "translation": "Darshan",
-        "notes": "Special Easter celebration service. All are welcome."
+        "location": "Kachohally"
       }
     ]
   },
