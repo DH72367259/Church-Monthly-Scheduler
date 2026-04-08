@@ -2,7 +2,7 @@
   {
     "month": "March 2026",
     "monthKey": "2026-03",
-    "notes": "Good Friday – Apr 3. Easter service at 7 AM (timing shifted to 10 AM).",
+    "notes": "",
     "services": [
       {
         "time": "Sun 7:00 AM",
@@ -49,12 +49,12 @@
         "time": "Sun 7:00 AM",
         "location": "Kachohally",
         "programs": [
-          { "role": "Incharge",       "weeks": ["Mohan",   "Anand",    "Raju",    "Raja"] },
-          { "role": "Choir",          "weeks": ["Mohan",   "Saravanan","Mohan",   "John"] },
-          { "role": "Praise Worship", "weeks": ["Anand",   "MUDIALBA", "deepa",   "Nalini"] },
-          { "role": "Sermon By",      "weeks": ["Anand",   "Saravanan","Mohan",   "Raju"] },
-          { "role": "Translation",    "weeks": ["Darshan", "Darshan",  "Nalini",  "Mudi"] },
-          { "role": "Preaching",      "weeks": ["Mohan",   "Mohan",    "Mohan",   "Mohan"] }
+          { "role": "Incharge",       "weeks": ["Mohan",   "Mohan",     "Mohan",  "Mohan"] },
+          { "role": "Choir",          "weeks": ["Jude",    "Anand",     "deepa",  "Pradeep"] },
+          { "role": "Praise Worship", "weeks": ["Mohan",   "Saravanan", "Jude",   "John"] },
+          { "role": "Sermon By",      "weeks": ["Mohan",   "Saravanan", "Mohan",  "Raju"] },
+          { "role": "Translation",    "weeks": ["Darshan", "Darshan",   "Nalini", "Mudi"] },
+          { "role": "Preaching",      "weeks": ["Mohan",   "Mohan",     "Mohan",  "Mohan"] }
         ]
       },
       {
