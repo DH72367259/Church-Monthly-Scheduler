@@ -1,6 +1,8 @@
 # Worship Library — Church Schedule
 
-A **Progressive Web App (PWA)** for the church congregation. Displays the monthly Sunday service rota and Tuesday prayer assignments. Works on **iOS (Safari)** and **Android (Chrome / any browser)** and can be pinned to the phone's home screen as an icon — no App Store needed.
+**🔗 Live app:** [https://dh72367259.github.io/Church-Monthly-Scheduler/](https://dh72367259.github.io/Church-Monthly-Scheduler/)
+
+A **Progressive Web App (PWA)** for the church congregation. Displays the monthly Sunday service rota, Tuesday prayer assignments, and special day services (Good Friday, Easter, etc.). Works on **iOS (Safari)** and **Android (Chrome / any browser)** and can be pinned to the phone's home screen as an icon — no App Store needed.
 
 ---
 
@@ -9,7 +11,6 @@ A **Progressive Web App (PWA)** for the church congregation. Displays the monthl
 - [Add to phone home screen](#add-to-phone-home-screen)
 - [Features](#features)
 - [Archive & PIN access](#archive--pin-access)
-- [Deploy on GitHub Pages](#deploy-on-github-pages)
 - [How admins update the schedule](#how-admins-update-the-schedule)
   - [Sunday Services](#datasunday-schedulejson)
   - [Tuesday Prayer](#datatuesday-prayerjson)
@@ -82,37 +83,24 @@ Commit and push. The new PINs take effect immediately for all users.
 
 ---
 
-## Deploy on GitHub Pages
+## Pushing future updates
 
-GitHub Pages is free and serves the app as a public HTTPS URL — required for PWA features (service worker, "Add to Home Screen").
+The app is already live. Whenever you edit any file locally, push changes to GitHub with:
 
 ```bash
-# 1. Create a new public GitHub repository (e.g. "church-schedule")
-
-# 2. Push this folder contents to the repo
-git init
+cd ~/Desktop/church-monthly/church-schedule
 git add .
-git commit -m "Initial church schedule PWA"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/church-schedule.git
-git push -u origin main
-
-# 3. Enable GitHub Pages
-#    → GitHub repo → Settings → Pages
-#    → Source: Deploy from branch → Branch: main → Folder: / (root)
-#    → Save
-
-# 4. Your app is live at:
-#    https://YOUR-USERNAME.github.io/church-schedule/
+git commit -m "Update schedule"
+git push
 ```
 
-Share that URL with the congregation. They bookmark it or add it to their home screen once — all future updates are instant.
+Or edit the JSON files **directly on GitHub** (pencil icon → commit) — no Terminal needed. Changes go live within seconds for all users.
 
 ---
 
 ## How admins update the schedule
 
-All schedule data is in **two JSON files** inside the `data/` folder. Edit them directly on GitHub (click the file → pencil icon → edit → commit), or clone and push. Users see the update on their next app open.
+All schedule data is in **three JSON files** inside the `data/` folder. Edit them directly on GitHub (click the file → pencil icon → edit → commit), or edit locally and push. Users see the update on their next app open.
 
 ### `data/sunday-schedule.json`
 
