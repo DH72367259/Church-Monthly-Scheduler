@@ -6,8 +6,8 @@
    VIEWER_PIN : shared with trusted congregation members to view archives.
    ADMIN_PIN  : for admin — same archive access + shows an "Admin" badge.
    ══════════════════════════════════════════════════════════════════════════ */
-const VIEWER_PIN = '1234';   /* ← change me */
-const ADMIN_PIN  = '9999';   /* ← change me */
+const VIEWER_PIN = '7242';   /* ← change me */
+const ADMIN_PIN  = '2603';   /* ← change me */
 
 /* Session-level access role: null | 'viewer' | 'admin' */
 let accessRole = null;  /* PIN required on every app load */
