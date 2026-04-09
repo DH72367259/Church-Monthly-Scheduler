@@ -1,6 +1,6 @@
 {
-  "name": "Worship Library — Schedule",
-  "short_name": "Worship Lib",
+  "name": "Peter Foundation Event Details",
+  "short_name": "PF Events",
   "description": "Monthly Sunday Service & Tuesday Prayer Schedule",
   "start_url": "./index.html",
   "display": "standalone",

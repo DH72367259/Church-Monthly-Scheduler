@@ -8,12 +8,11 @@
         "time": "Sun 7:00 AM",
         "location": "Kachohally",
         "programs": [
-          { "role": "Incharge",       "weeks": ["Mohan",   "Mohan",    "Mohan",    "Mohan",   "Mohan"] },
-          { "role": "Choir",          "weeks": ["Darshan", "Saravanan","Mohan",    "Nalini",  "John"] },
-          { "role": "Praise Worship", "weeks": ["Jude",    "Saravanan","Nalini",   "Nalini",  "Nalini"] },
-          { "role": "Sermon By",      "weeks": ["Girisha", "Pas.Anand","Raju",     "Deepa",   "John"] },
-          { "role": "Translation",    "weeks": ["Darshan", "Darshan",  "Mudi",     "Mudialba","Mudi"] },
-          { "role": "Preaching",      "weeks": ["Mohan",   "Mohan",    "Mohan",    "Pradeep", "Mohan"] }
+          { "role": "Incharge",       "weeks": ["Mohan",   "Anand",    "Raju",     "Raja",    "John"] },
+          { "role": "Praise Worship", "weeks": ["Mohan",   "Saravana", "Mohan",    "John",    "Anand"] },
+          { "role": "Choir",          "weeks": ["Darshan", "Saravana", "Deepa",    "Nalini",  "Saravana"] },
+          { "role": "Sermon By",      "weeks": ["Jude",    "MudiAlba", "John",     "Pradeep", "John"] },
+          { "role": "Translation",    "weeks": ["Darshan", "Anand",    "Anand",    "Rajesh",  "Anand"] }
         ]
       },
       {

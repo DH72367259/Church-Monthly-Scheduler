@@ -10,7 +10,7 @@ const VIEWER_PIN = '1234';   /* ← change me */
 const ADMIN_PIN  = '9999';   /* ← change me */
 
 /* Session-level access role: null | 'viewer' | 'admin' */
-let accessRole = sessionStorage.getItem('church_access_role') || null;
+let accessRole = null;  /* PIN required on every app load */
 
 /* ── App state ────────────────────────────────────────────────────────────── */
 const state = {
@@ -68,7 +68,8 @@ async function loadData() {
     /* Enable/disable the Special Days tab based on whether ANY events exist */
     refreshSpecialTabState();
 
-    render();
+    /* Gate entire app behind PIN — no data visible without a valid PIN */
+    showPinModal(() => render());
   } catch (err) {
     content.innerHTML = `
       <div class="error-card">
@@ -398,7 +399,6 @@ window.submitPin = function submitPin() {
     id('pin-input').focus();
     return;
   }
-  sessionStorage.setItem('church_access_role', accessRole);
   id('pin-modal').classList.add('hidden');
   if (_pinCallback) { _pinCallback(); _pinCallback = null; }
 };
@@ -407,6 +407,13 @@ window.submitPin = function submitPin() {
 window.cancelPin = function cancelPin() {
   id('pin-modal').classList.add('hidden');
   _pinCallback = null;
+  id('content').innerHTML = `
+    <div style="text-align:center;padding:60px 24px;">
+      <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+      <p style="font-size:16px;font-weight:600;color:#374151;margin-bottom:8px;">Schedule is locked</p>
+      <p style="font-size:13px;color:#6b7280;margin-bottom:24px;">Enter your PIN to view the schedule.</p>
+      <button class="pin-submit" style="max-width:200px;margin:0 auto;" onclick="showPinModal(() => render())">Enter PIN</button>
+    </div>`;
 };
 
 /** Allow Enter key to submit PIN */
