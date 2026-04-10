@@ -143,6 +143,7 @@ async function refreshData() {
 
 /* ── Drawer (hamburger menu) ────────────────────────────────────────────── */
 window.openMenu = function openMenu() {
+  if (!accessRole) return; /* no PIN entered yet — ignore */
   id('drawer').classList.add('open');
   id('drawer-overlay').classList.remove('hidden');
 };
