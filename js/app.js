@@ -557,12 +557,16 @@ window.cancelPin = function cancelPin() {
 };
 
 /* ── Refresh app ────────────────────────────────────────────────── */
-window.refreshApp = async function refreshApp() {
+window.refreshApp = function refreshApp() {
   if (!accessRole) return; /* no PIN entered yet */
   var btn = id('refresh-btn');
   if (btn) btn.classList.add('spinning');
-  await refreshData(true);
-  if (btn) btn.classList.remove('spinning');
+  /* Render immediately from current state so UI feels instant */
+  render();
+  /* Fetch fresh data in background — stop spinner when done */
+  refreshData(true).finally(function() {
+    if (btn) btn.classList.remove('spinning');
+  });
 };
 
 /* ── Admin month picker ───────────────────────────────────────────── */
