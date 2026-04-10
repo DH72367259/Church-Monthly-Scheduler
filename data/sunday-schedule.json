@@ -82,30 +82,30 @@
         "time": "Sun 7:00 AM",
         "location": "Kachohally",
         "programs": [
-          { "role": "Incharge",       "weeks": ["", "", "", "", ""] },
-          { "role": "Choir",          "weeks": ["", "", "", "", ""] },
-          { "role": "Praise Worship", "weeks": ["", "", "", "", ""] },
-          { "role": "Sermon By",      "weeks": ["", "", "", "", ""] },
-          { "role": "Translation",    "weeks": ["", "", "", "", ""] }
+          { "role": "Incharge",       "weeks": ["TestA", "", "", "", ""] },
+          { "role": "Choir",          "weeks": ["TestB", "", "", "", ""] },
+          { "role": "Praise Worship", "weeks": ["TestC", "", "", "", ""] },
+          { "role": "Sermon By",      "weeks": ["TestD", "", "", "", ""] },
+          { "role": "Translation",    "weeks": ["TestE", "", "", "", ""] }
         ]
       },
       {
         "time": "Sun 9:30 AM",
         "location": "Kachohally",
         "programs": [
-          { "role": "Incharge",       "weeks": ["", "", "", "", ""] },
-          { "role": "Praise Worship", "weeks": ["", "", "", "", ""] },
-          { "role": "Choir",          "weeks": ["", "", "", "", ""] },
-          { "role": "Sermon By",      "weeks": ["", "", "", "", ""] },
-          { "role": "Translation",    "weeks": ["", "", "", "", ""] }
+          { "role": "Incharge",       "weeks": ["TestA", "", "", "", ""] },
+          { "role": "Praise Worship", "weeks": ["TestC", "", "", "", ""] },
+          { "role": "Choir",          "weeks": ["TestB", "", "", "", ""] },
+          { "role": "Sermon By",      "weeks": ["TestD", "", "", "", ""] },
+          { "role": "Translation",    "weeks": ["TestE", "", "", "", ""] }
         ]
       },
       {
         "time": "Sun 9:30 AM",
         "location": "Girigowdana",
         "programs": [
-          { "role": "Incharge",  "weeks": ["", "", "", "", ""] },
-          { "role": "Sermon By", "weeks": ["", "", "", "", ""] }
+          { "role": "Incharge",  "weeks": ["TestA", "", "", "", ""] },
+          { "role": "Sermon By", "weeks": ["TestD", "", "", "", ""] }
         ]
       }
     ]
