@@ -438,20 +438,21 @@ function monthNavHTML(idx, total, tab, monthName, monthKey) {
                : state.specialData;
   const prevIdx = idx - 1;
 
-  /* Viewer: prev disabled only if the previous month is a past month */
+  /* Viewer: prev button hidden only when previous month is in the past */
   const viewerMode = (accessRole === 'viewer');
   const prevIsArchived = prevIdx >= 0 && isPastMonth(arr[prevIdx]?.monthKey);
-  const prevOff = (idx === 0 || (viewerMode && prevIsArchived) || (!viewerMode && accessRole !== 'admin' && prevIsArchived)) ? 'disabled' : '';
+  const prevOff = (idx === 0 || prevIsArchived) ? 'disabled' : '';
   const nextOff = idx >= total - 1 ? 'disabled' : '';
 
-  const archiveLock = prevIsArchived && !viewerMode && accessRole === 'admin' ? ' 🔒' : '';
+  const archiveLock = (prevIsArchived && accessRole === 'admin') ? ' 🔒' : '';
 
   /* Access badge */
   let roleBadge = '';
   if (accessRole === 'admin')  roleBadge = '<span class="role-badge admin-badge">Admin</span>';
   if (accessRole === 'viewer') roleBadge = '<span class="role-badge viewer-badge">Viewer</span>';
 
-  const prevHidden = (viewerMode && prevIsArchived) ? 'style="visibility:hidden"' : '';
+  /* Hide prev button entirely for viewers when prev is a past month */
+  const prevHidden = (viewerMode && prevIsArchived) ? 'style="display:none"' : '';
 
   var monthEl = accessRole === 'admin'
     ? '<button class="month-name-btn" onclick="showMonthPicker(\'' + tab + '\')" aria-label="Pick month">' + esc(monthName) + roleBadge + '<span class="picker-hint">&#9660;</span></button>'
