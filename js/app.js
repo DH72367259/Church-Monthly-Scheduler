@@ -2,12 +2,19 @@
 'use strict';
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   ACCESS PINs — Admin: change these two values here and push via Git.
-   VIEWER_PIN : shared with trusted congregation members to view archives.
-   ADMIN_PIN  : for admin — same archive access + shows an "Admin" badge.
+   ACCESS PINs — stored as SHA-256 hashes (never as plaintext).
+   To change a PIN: compute sha256(newPin) and replace the hash below.
+   VIEWER_HASH : congregation members — current month only.
+   ADMIN_HASH  : admin — all months + Admin badge.
    ══════════════════════════════════════════════════════════════════════════ */
-const VIEWER_PIN = '7242';   /* ← change me */
-const ADMIN_PIN  = '2603';   /* ← change me */
+const VIEWER_HASH = '7599dc4548df450045cf9bc258c43c654ea6d4af04074eb0292262e3d5187d5b';
+const ADMIN_HASH  = '120e90dfb21d132a40c6281f8c8f25331969559e200f589bfe8e775e333b5b3a';
+
+/** SHA-256 hash of a string via Web Crypto API */
+async function sha256(text) {
+  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
 
 /* Session-level access role: null | 'viewer' | 'admin' */
 let accessRole = null;  /* PIN required on every app load */
@@ -118,8 +125,8 @@ window.navigateMonth = function navigateMonth(tab, dir) {
              :                     'specialIdx';
   const next = clamp(state[idxK] + dir, 0, arr.length - 1);
 
-  /* Going backward into an archived (past) month — require PIN */
-  if (dir < 0 && isPastMonth(arr[next]?.monthKey) && !accessRole) {
+  /* Going backward into an archived (past) month — only admin may view */
+  if (dir < 0 && isPastMonth(arr[next]?.monthKey) && accessRole !== 'admin') {
     showPinModal(() => { state[idxK] = next; render(); });
     return;
   }
@@ -336,9 +343,9 @@ function monthNavHTML(idx, total, tab, monthName, monthKey) {
   const nextOff = idx >= total - 1 ? 'disabled' : '';
   const arr     = tab === 'sunday' ? state.sundayData : state.tuesdayData;
 
-  /* Lock icon on Previous button when the preceding month is archived & user is not unlocked */
+  /* Lock icon on Previous button when the preceding month is archived & user is not admin */
   const prevIdx  = idx - 1;
-  const prevIsArchived = prevIdx >= 0 && isPastMonth(arr[prevIdx]?.monthKey) && !accessRole;
+  const prevIsArchived = prevIdx >= 0 && isPastMonth(arr[prevIdx]?.monthKey) && accessRole !== 'admin';
   const archiveLock = prevIsArchived ? ' 🔒' : '';
 
   /* Access badge shown in the nav bar when a role is active */
@@ -386,12 +393,20 @@ function showPinModal(onSuccess) {
   setTimeout(() => id('pin-input').focus(), 80);
 }
 
-/** Called by the modal "View" button */
-window.submitPin = function submitPin() {
+/** Called by the modal Proceed button — async because we hash the input */
+window.submitPin = async function submitPin() {
   const entered = id('pin-input').value.trim();
-  if (entered === ADMIN_PIN) {
+  if (!entered) return;
+  let hash;
+  try {
+    hash = await sha256(entered);
+  } catch (e) {
+    id('pin-error').textContent = 'Verification error. Please try again.';
+    return;
+  }
+  if (hash === ADMIN_HASH) {
     accessRole = 'admin';
-  } else if (entered === VIEWER_PIN) {
+  } else if (hash === VIEWER_HASH) {
     accessRole = 'viewer';
   } else {
     id('pin-error').textContent = 'Incorrect PIN. Please try again.';
