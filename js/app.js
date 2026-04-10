@@ -37,9 +37,24 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function registerSW() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {/* silent */});
-  }
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    /* Check for a new SW version every time the app is opened */
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      newSW.addEventListener('statechange', () => {
+        /* New SW installed and ready — reload so users get fresh content */
+        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+          location.reload();
+        }
+      });
+    });
+  }).catch(() => {/* silent */});
+
+  /* Also reload if a new SW takes over while the app is already open */
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    location.reload();
+  });
 }
 
 /* ── Data loading ─────────────────────────────────────────────────────────── */
