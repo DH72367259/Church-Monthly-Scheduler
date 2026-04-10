@@ -778,6 +778,9 @@ window.submitPin = async function submitPin() {
     if (_afi >= 0) state.fastingIdx = _afi;
   } else if (hash === VIEWER_HASH) {
     accessRole = 'viewer';
+    /* Ensure download button stays hidden for viewers */
+    var _dlBtnV = id('download-btn');
+    if (_dlBtnV) _dlBtnV.classList.add('hidden');
     /* For viewer: default to first PUBLISHED non-past month */
     function _firstVisible(arr) {
       var i = arr.findIndex(function(m){ return !isPastMonth(m.monthKey) && m.published !== false; });

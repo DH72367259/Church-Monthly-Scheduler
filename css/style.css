@@ -111,6 +111,8 @@ body {
 }
 .download-btn:active { opacity: 1; }
 
+/* ─── utility hidden class ──────────────────────────────────────────────── */
+.hidden { display: none !important; }
 /* ─── hidden-tab: for viewer when month has no data ──────────────────────── */
 .hidden-tab { display: none !important; }
 
