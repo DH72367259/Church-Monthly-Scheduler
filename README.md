@@ -1,270 +1,160 @@
-# Worship Library — Church Schedule
+# Peter Foundation Event Details
 
-**🔗 Live app:** [https://dh72367259.github.io/Church-Monthly-Scheduler/](https://dh72367259.github.io/Church-Monthly-Scheduler/)
+**Live app:** [https://dh72367259.github.io/Church-Monthly-Scheduler/](https://dh72367259.github.io/Church-Monthly-Scheduler/)
 
-A **Progressive Web App (PWA)** for the church congregation. Displays the monthly Sunday service rota, Tuesday prayer assignments, and special day services (Good Friday, Easter, etc.). Works on **iOS (Safari)** and **Android (Chrome / any browser)** and can be pinned to the phone's home screen as an icon — no App Store needed.
+A **Progressive Web App (PWA)** for the Peter Foundation congregation. Displays the monthly Sunday service rota, Tuesday prayer assignments, and special day events. Fully works on **iOS (Safari)** and **Android (Chrome / any browser)** and can be pinned to the phone home screen as an icon — no App Store needed.
 
 ---
 
 ## Contents
 
-- [Add to phone home screen](#add-to-phone-home-screen)
-- [Features](#features)
-- [Archive & PIN access](#archive--pin-access)
-- [How admins update the schedule](#how-admins-update-the-schedule)
-  - [Sunday Services](#datasunday-schedulejson)
-  - [Tuesday Prayer](#datatuesday-prayerjson)
-  - [Special Days](#dataspecial-daysjson)
-- [Adding a new month](#adding-a-new-month)
-- [Project structure](#project-structure)
-- [Re-generating icons](#re-generating-icons)
-
----
-
-## Add to phone home screen
-
-### iOS — Safari
-1. Open the app URL in **Safari** (must be Safari, not Chrome, for full PWA support on iOS).
-2. Tap the **Share** button (box with upward arrow) at the bottom of the screen.
-3. Scroll down and tap **"Add to Home Screen"**.
-4. Tap **Add** — the Worship Library icon appears on your home screen.
-
-### Android — Chrome
-1. Open the URL in **Chrome**.
-2. Tap the **three-dot menu ⋮** in the top-right corner.
-3. Tap **"Add to Home Screen"** (some versions say **"Install App"**).
-4. Tap **Add** — the icon appears on your home screen and opens full-screen like a native app.
-
-> The app works **offline** after the first load — perfect for areas with weak signal.
+1. [Features](#features)
+2. [Access and PINs](#access-and-pins)
+3. [Schedule Structure](#schedule-structure)
+4. [Updating the Data](#updating-the-data)
+5. [Adding a New Month](#adding-a-new-month)
+6. [Changing a PIN](#changing-a-pin)
+7. [Installing on Your Phone](#installing-on-your-phone)
+8. [Technical Notes](#technical-notes)
 
 ---
 
 ## Features
 
-| Tab | What it shows | When visible |
-|-----|---------------|-------------|
-| **Sunday Services** | Up to three services (7 AM · 9 AM · 9:30 AM). Each is a scrollable table — rows = roles (Incharge, Choir, Praise Worship, Sermon By, Translation, Preaching), columns = actual calendar dates for each Sunday of the month. | Always |
-| **Tuesday Prayer** | One card per Tuesday. Each card lists up to 4 prayer-slot holders with their Name, Area, and Pastor to contact. | Always |
-| **✦ Special Days** | A purple card for each special event (e.g. Good Friday, Easter, Christmas). Shows date, time, location, and full program details. | **Only when the admin has added at least one event** in `special-days.json`. The tab is greyed out and disabled when there is nothing to show. |
-
-Other features:
-- **Month navigation** (← →) to move between months.
-- **Archive lock** — past months are automatically archived and PIN-protected (see below).
-- **Optional notice banner** at the top of each month for extra announcements.
-- Data is fetched fresh on every load — admin pushes a JSON change via Git and all users see it immediately.
+| Feature | Description |
+|---------|-------------|
+| **PIN-protected** | Two roles: Viewer (current and future months) and Admin (all months + tools) |
+| **Sunday Services** | Weekly rota for all three service locations with role-based columns per week |
+| **Tuesday Prayer** | Weekly prayer assignments by slot, name, area, and pastor |
+| **Special Days** | Good Friday, Easter, and other events with full program details |
+| **Month navigation** | Viewer: current and future only. Admin: all months including archived |
+| **Month picker** | Admin can jump to any month via a dropdown picker |
+| **Download / Print** | Admin-only button — opens a clean printable page for the current tab and month |
+| **Auto-refresh** | Silently checks for data updates in the background on every visit |
+| **PWA / Offline** | Works offline via a service worker cache; auto-updates when online |
+| **Home-screen icon** | Installable on iOS and Android — no App Store needed |
 
 ---
 
-## Archive & PIN access
+## Access and PINs
 
-Any month **before the current calendar month** is automatically marked as archived and read-only. Navigating backward into an archived month shows a PIN prompt.
+The app requires a PIN on every launch. There are two access levels:
 
-| Role | PIN (defaults) | Access |
-|------|---------------|--------|
-| General members | *(no PIN)* | Current month and future months only |
-| Trusted viewers | `1234` | All months including full archive — read-only |
-| Admin | `9999` | All months + gold **Admin** badge + reminder to edit via Git |
+| Role | Access | PIN |
+|------|--------|-----|
+| **Viewer** | Current and future months (read-only) | Contact your administrator |
+| **Admin** | All months + Download/Print + Month picker | Contact your administrator |
 
-**Rules:**
-- Archived data is always **read-only** in the app. Nobody can edit schedules through the app — all changes go through the Git JSON files.
-- The PIN session lasts until the browser tab is closed (`sessionStorage`). Users who close and reopen the app must re-enter their PIN to view archives.
-- Admin and viewer PINs are stored only in `js/app.js` — change them there and push via Git to update for everyone.
+> **Security note:** PINs are never stored in plain text. They are verified using SHA-256 hashing in the browser. Never share your PIN publicly.
 
-### Changing the PINs
+---
 
-Open `js/app.js` and update the two lines at the very top:
+## Schedule Structure
+
+### Sunday Services
+
+Three services run every Sunday:
+
+| Time | Location |
+|------|----------|
+| 7:00 AM | Kachohally |
+| 9:30 AM | Kachohally |
+| 9:30 AM | Girigowdanadoddi |
+
+Each service shows a table of program roles (Choir, Praise Worship, Sermon By, etc.) with actual Sunday dates as column headers.
+
+### Tuesday Prayer
+
+Lists prayer assignments for each Tuesday: slot number, name, area, and pastor.
+
+### Special Days
+
+Events such as Good Friday and Easter with full details: time, location, incharge, choir, praise worship, sermon, and more.
+
+---
+
+## Updating the Data
+
+All schedule data is stored in plain JSON files inside the `data/` folder:
+
+```
+data/
+  sunday-schedule.json     Sunday service rota (all three locations)
+  tuesday-schedule.json    Tuesday prayer assignments
+  special-schedule.json    Special day events
+```
+
+To update a role for a given week, open the relevant JSON file and edit the `weeks` array for that program entry. Index 0 is the first Sunday of the month, index 1 is the second Sunday, and so on.
+
+Example — updating the Choir for the 2nd Sunday of April at 9:30 AM Kachohally:
+
+```json
+{
+  "role": "Choir",
+  "weeks": ["Group A", "Group B", "", ""]
+}
+```
+
+After editing, commit and push to the `main` branch. The live app refreshes automatically within seconds once GitHub Pages deploys.
+
+---
+
+## Adding a New Month
+
+1. Open the relevant JSON file (e.g., `data/sunday-schedule.json`).
+2. Copy the last month object as a template.
+3. Update `"month"` (e.g., `"June 2025"`) and `"monthKey"` (e.g., `"2025-06"`).
+4. Clear all `weeks` values to empty strings `""`.
+5. Commit and push.
+
+The app picks up new months automatically — no code changes required.
+
+---
+
+## Changing a PIN
+
+PINs are stored as SHA-256 hashes in `js/app.js`:
 
 ```js
-const VIEWER_PIN = '1234';   // ← trusted congregation members
-const ADMIN_PIN  = '9999';   // ← admin
+const VIEWER_HASH = '...';   // SHA-256 hash of the viewer PIN
+const ADMIN_HASH  = '...';   // SHA-256 hash of the admin PIN
 ```
 
-Commit and push. The new PINs take effect immediately for all users.
+To update a PIN:
+
+1. Generate the SHA-256 hash of your new PIN (paste in any browser DevTools console):
+   ```js
+   crypto.subtle.digest('SHA-256', new TextEncoder().encode('YOUR_NEW_PIN'))
+     .then(b => console.log([...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('')));
+   ```
+2. Replace the matching hash constant in `js/app.js`.
+3. Commit and push.
 
 ---
 
-## Pushing future updates
+## Installing on Your Phone
 
-The app is already live. Whenever you edit any file locally, push changes to GitHub with:
+### iOS (Safari)
 
-```bash
-cd ~/Desktop/church-monthly/church-schedule
-git add .
-git commit -m "Update schedule"
-git push
-```
+1. Open the app link in Safari.
+2. Tap the **Share** icon (box with arrow pointing up).
+3. Scroll down and tap **Add to Home Screen**.
+4. Tap **Add** — the icon appears on your home screen.
 
-Or edit the JSON files **directly on GitHub** (pencil icon → commit) — no Terminal needed. Changes go live within seconds for all users.
+### Android (Chrome)
 
----
-
-## How admins update the schedule
-
-All schedule data is in **three JSON files** inside the `data/` folder. Edit them directly on GitHub (click the file → pencil icon → edit → commit), or edit locally and push. Users see the update on their next app open.
-
-### `data/sunday-schedule.json`
-
-An array — one object per month. Add new months at the end; keep old ones so the archive works.
-
-```json
-{
-  "month": "May 2026",
-  "monthKey": "2026-05",
-  "notes": "Optional notice — leave empty string if none.",
-  "services": [
-    {
-      "time": "Sun 7:00 AM",
-      "location": "Kachohally",
-      "programs": [
-        { "role": "Incharge",       "weeks": ["Name1", "Name2", "Name3", "Name4", ""] },
-        { "role": "Choir",          "weeks": ["Name1", "Name2", "Name3", "Name4", ""] },
-        { "role": "Praise Worship", "weeks": ["Name1", "Name2", "Name3", "Name4", ""] },
-        { "role": "Sermon By",      "weeks": ["Name1", "Name2", "Name3", "Name4", ""] },
-        { "role": "Translation",    "weeks": ["Name1", "Name2", "Name3", "Name4", ""] },
-        { "role": "Preaching",      "weeks": ["Name1", "Name2", "Name3", "Name4", ""] }
-      ]
-    },
-    {
-      "time": "Sun 9:00 AM",
-      "location": "Kachohally",
-      "programs": [ "..." ]
-    },
-    {
-      "time": "Sun 9:30 AM",
-      "location": "Girigowdana",
-      "programs": [ "..." ]
-    }
-  ]
-}
-```
-
-**Field notes:**
-- `monthKey` — `"YYYY-MM"` format. The app uses this to calculate the actual Sunday dates shown as column headers.
-- `weeks` — up to 5 entries (one per Sunday). Use `""` for any Sunday not yet assigned.
-- To add a new service location/time, add another object inside `services`.
-
-### `data/tuesday-prayer.json`
-
-An array — one object per month.
-
-```json
-{
-  "month": "May 2026",
-  "monthKey": "2026-05",
-  "notes": "",
-  "tuesdays": [
-    {
-      "date": "May 5, 2026",
-      "slots": [
-        { "name": "Person A", "area": "Kachohally",   "pastor": "Mohan" },
-        { "name": "Person B", "area": "Girigowdana",  "pastor": "Anand" },
-        { "name": "Person C", "area": "Whitefield",   "pastor": "Saravanan" },
-        { "name": "Person D", "area": "Marathahalli", "pastor": "Jude" }
-      ]
-    }
-  ]
-}
-```
-
-**Field notes:**
-- Each Tuesday supports **up to 4 slots**. Remove empty entries rather than leaving them blank.
-- Add one `tuesdays` entry per Tuesday in the month.
-- `pastor` is the contact pastor for that slot — shown in blue in the app.
-
-### `data/special-days.json`
-
-An array — one object per month. **The Special Days tab only becomes visible to users when at least one month has a non-empty `events` array.** If all months have `"events": []`, the tab stays greyed out and disabled.
-
-```json
-{
-  "month": "April 2026",
-  "monthKey": "2026-04",
-  "events": [
-    {
-      "date": "April 3, 2026",
-      "day": "Friday",
-      "title": "Good Friday",
-      "time": "7:00 AM",
-      "location": "Kachohally",
-      "incharge": "Mohan",
-      "choir": "Darshan",
-      "praiseWorship": "Anand",
-      "sermonBy": "Pastor John",
-      "translation": "Darshan",
-      "preaching": "Pastor John",
-      "notes": "Fasting prayer service. Please arrive early."
-    },
-    {
-      "date": "April 5, 2026",
-      "day": "Sunday",
-      "title": "Easter Sunday",
-      "time": "10:00 AM",
-      "location": "Kachohally",
-      "incharge": "Mohan",
-      "choir": "Saravanan",
-      "praiseWorship": "MUDIALBA",
-      "preaching": "Pastor Mohan",
-      "notes": "Special Easter celebration. All are welcome."
-    }
-  ]
-}
-```
-
-**Field notes:**
-- Only `date` and `title` are required. All other fields are optional — only filled fields appear in the card.
-- Add as many events as needed inside one month's `events` array.
-- To disable the tab for a month with no special days, set `"events": []`.
-- Each month entry must still exist in the array (even with empty events) so month navigation works correctly.
-
-**To add a special day for a new month**, append a new object to the array following the same structure.
+1. Open the app link in Chrome.
+2. Tap the **three-dot menu** in the top right.
+3. Tap **Add to Home Screen** or **Install App**.
+4. Tap **Add** — the icon appears on your launcher.
 
 ---
 
-## Adding a new month
+## Technical Notes
 
-1. Open each of the three JSON files on GitHub: `sunday-schedule.json`, `tuesday-prayer.json`, and `special-days.json`.
-2. **Append** a new month object to the end of each array (copy the templates above).
-3. Fill in names. Use `""` for any week not yet assigned.
-4. For `special-days.json` — add events if there are any special services, otherwise set `"events": []`.
-5. Commit and push. The new month is live immediately.
-
-> Past months stay in the array permanently and become part of the archive. Users with the viewer or admin PIN can browse them.
-
----
-
-## Project structure
-
-```
-church-schedule/
-├── index.html                ← App shell (HTML structure + PIN modal)
-├── manifest.json             ← PWA manifest (name, icons, theme colour)
-├── sw.js                     ← Service worker (offline caching)
-├── generate-icons.py         ← Run once to produce PNG icons (pure Python, no pip needed)
-├── css/
-│   └── style.css             ← All styles (layout, tables, modal, badges, special days)
-├── js/
-│   └── app.js                ← All app logic — tabs, month nav, PIN gate, rendering
-├── data/
-│   ├── sunday-schedule.json  ← ★ ADMIN EDITS THIS for Sunday services
-│   ├── tuesday-prayer.json   ← ★ ADMIN EDITS THIS for Tuesday prayers
-│   └── special-days.json     ← ★ ADMIN EDITS THIS for special days (Good Friday, Easter, etc.)
-└── icons/
-    ├── icon.svg              ← Vector source icon
-    ├── icon-192.png          ← PWA manifest icon (Android)
-    ├── icon-512.png          ← PWA manifest icon large (Android)
-    └── apple-touch-icon.png  ← iOS "Add to Home Screen" icon (180×180)
-```
-
-No build step. No npm. No frameworks. Plain HTML + CSS + JavaScript.
-
----
-
-## Re-generating icons
-
-Run after any changes to `generate-icons.py`:
-
-```bash
-python3 generate-icons.py
-```
-
-Uses only Python built-ins (`struct`, `zlib`) — no Pillow or other packages needed.
+- **Stack:** Vanilla HTML, CSS, and JavaScript — no frameworks, no npm, no build step.
+- **Hosting:** GitHub Pages, auto-deployed from the `main` branch on every push.
+- **Service Worker:** `sw.js` caches all app assets for offline use and posts an `SW_UPDATED` message to the page when a new version activates, triggering an automatic reload.
+- **Data fetching:** JSON files are fetched with a cache-busting timestamp so admin data changes are seen immediately.
+- **Admin Print / Download:** Tapping the download button (top-right, admin only) opens a self-contained printable HTML page in a new browser tab. On iOS: tap **Share → Print**. On Android: tap the browser menu → **Print** or **Save as PDF**.
+- **No server required:** The entire app runs in the browser. All data is static JSON served from GitHub Pages.

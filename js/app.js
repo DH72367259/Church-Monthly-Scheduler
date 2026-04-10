@@ -517,6 +517,8 @@ window.submitPin = async function submitPin() {
   }
   if (hash === ADMIN_HASH) {
     accessRole = 'admin';
+    var _dlBtn = id('download-btn');
+    if (_dlBtn) _dlBtn.classList.remove('hidden');
     /* Reset to first non-past (current) month on login */
     const _asi = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
     if (_asi >= 0) state.sundayIdx = _asi;
@@ -568,6 +570,160 @@ window.refreshApp = function refreshApp() {
     if (btn) btn.classList.remove('spinning');
   });
 };
+
+/* ── Admin download / print ─────────────────────────────────────── */
+window.downloadSchedule = function downloadSchedule() {
+  if (accessRole !== 'admin') return;
+
+  /* Determine which tab is active and pick the matching data + index */
+  var tabLabel, data, sundays;
+  if (state.tab === 'sunday') {
+    data      = state.sundayData[state.sundayIdx];
+    sundays   = getSundaysOfMonth(data ? data.monthKey : null);
+    tabLabel  = 'Sunday Services';
+  } else if (state.tab === 'tuesday') {
+    data      = state.tuesdayData[state.tuesdayIdx];
+    tabLabel  = 'Tuesday Prayer';
+  } else {
+    data      = state.specialData[state.specialIdx];
+    tabLabel  = 'Special Days';
+  }
+
+  if (!data) { alert('No data available to print.'); return; }
+
+  var monthTitle = data.month || '';
+
+  /* ── Build inner HTML for the section ── */
+  var bodyHTML = '';
+
+  if (state.tab === 'sunday') {
+    if (!data.services || data.services.length === 0) {
+      bodyHTML = '<p>No services scheduled this month.</p>';
+    } else {
+      data.services.forEach(function(service) {
+        var maxWeeks = Math.max.apply(null, service.programs.map(function(p){ return p.weeks.length; }));
+        var headerCells = '<th class="role-col">Program</th>';
+        for (var i = 0; i < maxWeeks; i++) {
+          var label = sundays[i] ? sundays[i].toLocaleDateString('en-US', { month:'short', day:'numeric' }) : ('Wk '+(i+1));
+          headerCells += '<th>' + htmlEsc(label) + '</th>';
+        }
+        var rows = service.programs.map(function(p) {
+          var cells = '<td class="role-col">' + htmlEsc(p.role) + '</td>';
+          for (var i = 0; i < maxWeeks; i++) {
+            var val = p.weeks[i];
+            cells += val ? '<td>' + htmlEsc(val) + '</td>' : '<td class="empty">—</td>';
+          }
+          return '<tr>' + cells + '</tr>';
+        }).join('');
+
+        bodyHTML += '<div class="service-block">'
+          + '<h3>' + htmlEsc(service.time)
+          + (service.location ? ' &mdash; ' + htmlEsc(service.location) : '')
+          + '</h3>'
+          + '<table><thead><tr>' + headerCells + '</tr></thead><tbody>' + rows + '</tbody></table>'
+          + '</div>';
+      });
+    }
+  } else if (state.tab === 'tuesday') {
+    if (!data.tuesdays || data.tuesdays.length === 0) {
+      bodyHTML = '<p>No Tuesday prayer sessions this month.</p>';
+    } else {
+      data.tuesdays.forEach(function(tuesday) {
+        var rows = (tuesday.slots || []).map(function(slot, i) {
+          return '<tr><td>' + (i+1) + '</td><td>' + htmlEsc(slot.name)
+            + '</td><td>' + htmlEsc(slot.area)
+            + '</td><td>' + htmlEsc(slot.pastor) + '</td></tr>';
+        }).join('');
+        bodyHTML += '<div class="service-block">'
+          + '<h3>🙏 ' + htmlEsc(tuesday.date) + '</h3>'
+          + '<table><thead><tr><th>#</th><th>Name</th><th>Area</th><th>Pastor</th></tr></thead>'
+          + '<tbody>' + rows + '</tbody></table>'
+          + '</div>';
+      });
+    }
+  } else {
+    /* Special days */
+    if (!data.events || data.events.length === 0) {
+      bodyHTML = '<p>No special events this month.</p>';
+    } else {
+      data.events.forEach(function(ev) {
+        var fields = [
+          { label:'Time',           value:ev.time },
+          { label:'Location',       value:ev.location },
+          { label:'Incharge',       value:ev.incharge },
+          { label:'Choir',          value:ev.choir },
+          { label:'Praise Worship', value:ev.praiseWorship },
+          { label:'Sermon By',      value:ev.sermonBy },
+          { label:'Translation',    value:ev.translation },
+          { label:'Preaching',      value:ev.preaching }
+        ].filter(function(f){ return f.value; });
+        var rows = fields.map(function(f){
+          return '<tr><td class="sp-label">' + htmlEsc(f.label) + '</td><td>' + htmlEsc(f.value) + '</td></tr>';
+        }).join('');
+        bodyHTML += '<div class="service-block">'
+          + '<h3>' + htmlEsc(ev.title) + (ev.day ? ' &mdash; ' + htmlEsc(ev.day) : '') + '</h3>'
+          + '<p class="ev-date">' + htmlEsc(ev.date) + '</p>'
+          + '<table><tbody>' + rows + '</tbody></table>'
+          + '</div>';
+      });
+    }
+  }
+
+  /* ── Assemble full printable HTML page ── */
+  var html = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<title>Peter Foundation &mdash; ' + htmlEsc(tabLabel) + ' &mdash; ' + htmlEsc(monthTitle) + '</title>'
+    + '<style>'
+    + 'body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:20px;color:#111;background:#fff;}'
+    + '.print-header{text-align:center;margin-bottom:24px;border-bottom:2px solid #333;padding-bottom:12px;}'
+    + '.print-header h1{margin:0 0 4px;font-size:22px;}'
+    + '.print-header h2{margin:0;font-size:16px;font-weight:normal;color:#555;}'
+    + '.service-block{margin-bottom:28px;}'
+    + '.service-block h3{font-size:15px;margin:0 0 8px;padding:6px 10px;background:#f3f4f6;border-left:4px solid #1a56db;}'
+    + '.ev-date{margin:0 0 8px;font-size:13px;color:#666;}'
+    + 'table{width:100%;border-collapse:collapse;font-size:13px;}'
+    + 'th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;}'
+    + 'th{background:#e5e7eb;font-weight:600;}'
+    + '.role-col{min-width:120px;font-weight:600;background:#f9fafb;}'
+    + '.sp-label{font-weight:600;width:130px;background:#f9fafb;}'
+    + '.empty{color:#aaa;text-align:center;}'
+    + '.footer{margin-top:32px;padding-top:12px;border-top:1px solid #ddd;font-size:11px;color:#999;text-align:center;}'
+    + '@media print{'
+    + '  body{padding:0;}'
+    + '  .no-print{display:none!important;}'
+    + '  .service-block{page-break-inside:avoid;}'
+    + '}'
+    + '</style></head><body>'
+    + '<div class="print-header">'
+    + '<h1>Peter Foundation</h1>'
+    + '<h2>' + htmlEsc(tabLabel) + ' &mdash; ' + htmlEsc(monthTitle) + '</h2>'
+    + '</div>'
+    + '<button class="no-print" onclick="window.print()" style="display:block;margin:0 auto 24px;padding:10px 28px;font-size:15px;background:#1a56db;color:#fff;border:none;border-radius:8px;cursor:pointer;">&#128438; Print / Save as PDF</button>'
+    + bodyHTML
+    + '<div class="footer">Peter Foundation Event Details &mdash; printed '
+    + new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
+    + '</div>'
+    + '</body></html>';
+
+  var win = window.open('', '_blank');
+  if (!win) {
+    alert('Pop-up blocked. Please allow pop-ups for this site and try again.');
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+};
+
+/** HTML-escape helper used in print page generation */
+function htmlEsc(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 /* ── Admin month picker ───────────────────────────────────────────── */
 var _pickerTab = null;

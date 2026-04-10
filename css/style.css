@@ -96,6 +96,21 @@ body {
 .refresh-btn.spinning { animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.download-btn {
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 0 4px 8px;
+  line-height: 1;
+  opacity: .85;
+  transition: opacity .15s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.download-btn:active { opacity: 1; }
+
 /* ─── hidden-tab: for viewer when month has no data ──────────────────────── */
 .hidden-tab { display: none !important; }
 
