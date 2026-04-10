@@ -77,40 +77,97 @@ body {
   font-weight: 400;
 }
 
-/* ─── Tab bar ─────────────────────────────────────────────────────────────── */
-.tab-bar {
-  display: flex;
-  background: var(--white);
-  border-bottom: 2px solid var(--gray-200);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+/* ─── Header hamburger button ─────────────────────────────────────────────── */
+.hamburger-btn {
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 8px 4px 0;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
 }
 
-.tab-btn {
-  flex: 1;
-  padding: 14px 8px;
+/* ─── Side drawer ─────────────────────────────────────────────────────────── */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 200;
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+}
+.drawer-overlay.hidden { display: none; }
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 72vw;
+  max-width: 280px;
+  background: var(--white);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0,0,0,.18);
+  transform: translateX(-100%);
+  transition: transform .25s ease;
+}
+.drawer.open { transform: translateX(0); }
+
+.drawer-header {
+  background: var(--blue);
+  color: var(--white);
+  padding: 18px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.drawer-title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+.drawer-close {
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 20px;
   border: none;
   background: transparent;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
-  color: var(--gray-600);
+  color: var(--gray-700);
   cursor: pointer;
-  border-bottom: 3px solid transparent;
-  transition: color .18s, border-color .18s;
+  border-left: 4px solid transparent;
+  text-align: left;
+  transition: background .15s, border-color .15s, color .15s;
   -webkit-tap-highlight-color: transparent;
-  outline: none;
 }
-
-.tab-btn.active {
+.drawer-item:active { background: var(--gray-100); }
+.drawer-item.active {
   color: var(--blue);
-  border-bottom-color: var(--blue);
+  border-left-color: var(--blue);
+  background: var(--blue-light);
   font-weight: 700;
 }
-
-.tab-btn:not(.active):active {
-  background: var(--gray-100);
+.drawer-item.disabled {
+  opacity: .4;
+  pointer-events: none;
 }
 
 /* ─── Content area ────────────────────────────────────────────────────────── */
@@ -462,27 +519,6 @@ body {
   color: var(--gray-400);
   padding: 6px 0 10px;
   user-select: none;
-}
-
-/* ─── Special Days tab button ────────────────────────────────────────────── */
-.tab-btn-special {
-  color: #7c3aed;
-  font-weight: 600;
-}
-
-.tab-btn-special.active {
-  color: #7c3aed;
-  border-bottom-color: #7c3aed;
-}
-
-/* Disabled state — greyed out, not clickable */
-.tab-btn.disabled {
-  color: var(--gray-400) !important;
-  border-bottom-color: transparent !important;
-  cursor: not-allowed;
-  pointer-events: none;
-  font-weight: 400;
-  opacity: 0.55;
 }
 
 /* ─── Special event card ──────────────────────────────────────────────────── */

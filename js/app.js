@@ -136,31 +136,44 @@ async function refreshData() {
   } catch (e) { /* silent — don't disrupt the user */ }
 }
 
-/**
- * Enable the Special Days tab if ANY month has at least one event.
- * Disable and grey it out otherwise.
- */
+/* ── Drawer (hamburger menu) ────────────────────────────────────────────── */
+window.openMenu = function openMenu() {
+  id('drawer').classList.add('open');
+  id('drawer-overlay').classList.remove('hidden');
+};
+window.closeMenu = function closeMenu() {
+  id('drawer').classList.remove('open');
+  id('drawer-overlay').classList.add('hidden');
+};
+
+window.selectTab = function selectTab(tab) {
+  closeMenu();
+  /* Block disabled Special Days */
+  if (tab === 'special' && id('drawer-special').classList.contains('disabled')) return;
+  switchTab(tab);
+};
+
+/* Sync drawer highlight and header subtitle */
+function updateDrawerState(tab) {
+  const labels = { sunday: 'Sunday Services', tuesday: 'Tuesday Prayer', special: 'Special Days' };
+  ['sunday','tuesday','special'].forEach(t => {
+    id('drawer-' + t).classList.toggle('active', t === tab);
+  });
+  const label = id('header-tab-label');
+  if (label) label.textContent = labels[tab] || '';
+}
+
 function refreshSpecialTabState() {
-  const btn      = id('tab-special');
+  const btn = id('drawer-special');
   if (!btn) return;
-  const hasAny   = state.specialData.some(m => m.events && m.events.length > 0);
+  const hasAny = state.specialData.some(m => m.events && m.events.length > 0);
   btn.classList.toggle('disabled', !hasAny);
-  btn.setAttribute('aria-disabled', String(!hasAny));
 }
 
 /* ── Tab switching ────────────────────────────────────────────────────────── */
 window.switchTab = function switchTab(tab) {
-  /* Block clicks on disabled Special Days tab */
-  if (tab === 'special') {
-    const btn = id('tab-special');
-    if (btn && btn.classList.contains('disabled')) return;
-  }
   state.tab = tab;
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    const active = btn.dataset.tab === tab;
-    btn.classList.toggle('active', active);
-    btn.setAttribute('aria-selected', String(active));
-  });
+  updateDrawerState(tab);
   render();
 };
 
@@ -173,7 +186,8 @@ window.navigateMonth = function navigateMonth(tab, dir) {
              : tab === 'tuesday' ? 'tuesdayIdx'
              :                     'specialIdx';
   const next = clamp(state[idxK] + dir, 0, arr.length - 1);
-
+  /* Viewer: cannot navigate to past months at all */
+  if (accessRole === 'viewer' && isPastMonth(arr[next]?.monthKey)) return;
   /* Going backward into an archived (past) month — only admin may view */
   if (dir < 0 && isPastMonth(arr[next]?.monthKey) && accessRole !== 'admin') {
     showPinModal(() => { state[idxK] = next; render(); });
@@ -186,6 +200,7 @@ window.navigateMonth = function navigateMonth(tab, dir) {
 
 /* ── Render dispatcher ────────────────────────────────────────────────────── */
 function render() {
+  updateDrawerState(state.tab);
   if      (state.tab === 'sunday')  renderSunday();
   else if (state.tab === 'tuesday') renderTuesday();
   else                              renderSpecial();
@@ -388,24 +403,30 @@ function renderSpecial() {
 
 /** Build month navigation bar HTML */
 function monthNavHTML(idx, total, tab, monthName, monthKey) {
-  const prevOff = idx === 0        ? 'disabled' : '';
-  const nextOff = idx >= total - 1 ? 'disabled' : '';
-  const arr     = tab === 'sunday' ? state.sundayData : state.tuesdayData;
+  const arr    = tab === 'sunday' ? state.sundayData
+               : tab === 'tuesday' ? state.tuesdayData
+               : state.specialData;
+  const prevIdx = idx - 1;
 
-  /* Lock icon on Previous button when the preceding month is archived & user is not admin */
-  const prevIdx  = idx - 1;
+  /* Viewer: prev button completely hidden (they only see current + future months) */
+  const viewerMode = (accessRole === 'viewer');
   const prevIsArchived = prevIdx >= 0 && isPastMonth(arr[prevIdx]?.monthKey) && accessRole !== 'admin';
-  const archiveLock = prevIsArchived ? ' 🔒' : '';
+  const prevOff = (idx === 0 || viewerMode || prevIsArchived) ? 'disabled' : '';
+  const nextOff = idx >= total - 1 ? 'disabled' : '';
 
-  /* Access badge shown in the nav bar when a role is active */
+  const archiveLock = prevIsArchived && !viewerMode ? ' 🔒' : '';
+
+  /* Access badge */
   let roleBadge = '';
   if (accessRole === 'admin')  roleBadge = '<span class="role-badge admin-badge">Admin</span>';
   if (accessRole === 'viewer') roleBadge = '<span class="role-badge viewer-badge">Viewer</span>';
 
+  const prevHidden = viewerMode ? 'style="visibility:hidden"' : '';
+
   return `
     <div class="month-nav">
       <button class="nav-btn" onclick="navigateMonth('${tab}',-1)"
-              ${prevOff} aria-label="Previous month" title="${prevIsArchived ? 'Archive — PIN required' : 'Previous month'}">&#8249;${esc(archiveLock)}</button>
+              ${prevOff} ${prevHidden} aria-label="Previous month">&#8249;${esc(archiveLock)}</button>
       <span class="month-name">${esc(monthName)}${roleBadge}</span>
       <button class="nav-btn" onclick="navigateMonth('${tab}',1)"
               ${nextOff} aria-label="Next month">&#8250;</button>
