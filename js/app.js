@@ -95,7 +95,7 @@ async function loadData() {
     state.specialIdx = firstWithEvents >= 0 ? firstWithEvents : Math.max(0, state.specialData.length - 1);
 
     /* Enable/disable the Special Days tab based on whether ANY events exist */
-    refreshSpecialTabState();
+    refreshAllTabStates();
 
     /* Gate entire app behind PIN — no data visible without a valid PIN */
     showPinModal(() => render());
@@ -130,7 +130,7 @@ async function refreshData() {
       state.sundayData  = newSunday;
       state.tuesdayData = newTuesday;
       state.specialData = newSpecial;
-      refreshSpecialTabState();
+      refreshAllTabStates();
       render();
     }
   } catch (e) { /* silent — don't disrupt the user */ }
@@ -148,8 +148,8 @@ window.closeMenu = function closeMenu() {
 
 window.selectTab = function selectTab(tab) {
   closeMenu();
-  /* Block disabled Special Days */
-  if (tab === 'special' && id('drawer-special').classList.contains('disabled')) return;
+  var btn = id('drawer-' + tab);
+  if (btn && (btn.classList.contains('disabled') || btn.classList.contains('hidden-tab'))) return;
   switchTab(tab);
 };
 
@@ -163,12 +163,30 @@ function updateDrawerState(tab) {
   if (label) label.textContent = labels[tab] || '';
 }
 
-function refreshSpecialTabState() {
-  const btn = id('drawer-special');
-  if (!btn) return;
-  const hasAny = state.specialData.some(m => m.events && m.events.length > 0);
-  btn.classList.toggle('disabled', !hasAny);
+function refreshAllTabStates() {
+  const now = new Date();
+  const curKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+
+  const tuesdayBtn = id('drawer-tuesday');
+  const specialBtn = id('drawer-special');
+
+  if (accessRole === 'viewer') {
+    const td = state.tuesdayData.find(function(m){ return m.monthKey === curKey; });
+    const hasTuesday = !!(td && td.tuesdays && td.tuesdays.length > 0);
+    if (tuesdayBtn) tuesdayBtn.classList.toggle('hidden-tab', !hasTuesday);
+
+    const sd = state.specialData.find(function(m){ return m.monthKey === curKey; });
+    const hasSpecial = !!(sd && sd.events && sd.events.length > 0);
+    if (specialBtn) specialBtn.classList.toggle('hidden-tab', !hasSpecial);
+
+    if (!hasTuesday && state.tab === 'tuesday') { state.tab = 'sunday'; }
+    if (!hasSpecial  && state.tab === 'special')  { state.tab = 'sunday'; }
+  } else {
+    if (tuesdayBtn) tuesdayBtn.classList.remove('hidden-tab');
+    if (specialBtn) specialBtn.classList.remove('hidden-tab');
+  }
 }
+function refreshSpecialTabState() { refreshAllTabStates(); }
 
 /* ── Tab switching ────────────────────────────────────────────────────────── */
 window.switchTab = function switchTab(tab) {
@@ -283,7 +301,7 @@ function renderTuesday() {
   const content = id('content');
 
   if (!state.tuesdayData.length) {
-    content.innerHTML = emptyState('No Tuesday prayer data available.');
+    content.innerHTML = emptyState('No Tuesday prayer for this month.');
     return;
   }
 
@@ -300,7 +318,7 @@ function renderTuesday() {
   }
 
   if (!data.tuesdays || data.tuesdays.length === 0) {
-    html += emptyState('No Tuesday prayers scheduled for this month.');
+    html += emptyState('No Tuesday prayer scheduled this month.');
     content.innerHTML = html;
     return;
   }
@@ -352,8 +370,7 @@ function renderSpecial() {
   if (!data.events || data.events.length === 0) {
     html += `<div class="empty-state">
       <div class="empty-icon">✦</div>
-      <p>No special days added for ${esc(data.month)}.<br>
-         The admin can add events to the JSON file.</p>
+      <p>No special events for ${esc(data.month)}.</p>
     </div>`;
     content.innerHTML = html;
     return;
@@ -423,14 +440,15 @@ function monthNavHTML(idx, total, tab, monthName, monthKey) {
 
   const prevHidden = viewerMode ? 'style="visibility:hidden"' : '';
 
-  return `
-    <div class="month-nav">
-      <button class="nav-btn" onclick="navigateMonth('${tab}',-1)"
-              ${prevOff} ${prevHidden} aria-label="Previous month">&#8249;${esc(archiveLock)}</button>
-      <span class="month-name">${esc(monthName)}${roleBadge}</span>
-      <button class="nav-btn" onclick="navigateMonth('${tab}',1)"
-              ${nextOff} aria-label="Next month">&#8250;</button>
-    </div>`;
+  var monthEl = accessRole === 'admin'
+    ? '<button class="month-name-btn" onclick="showMonthPicker(\'' + tab + '\')" aria-label="Pick month">' + esc(monthName) + roleBadge + '<span class="picker-hint">&#9660;</span></button>'
+    : '<span class="month-name">' + esc(monthName) + roleBadge + '</span>';
+
+  return '<div class="month-nav">' +
+    '<button class="nav-btn" onclick="navigateMonth(\'' + tab + '\',-1)" ' + prevOff + ' ' + prevHidden + ' aria-label="Previous month">&#8249;' + esc(archiveLock) + '</button>' +
+    monthEl +
+    '<button class="nav-btn" onclick="navigateMonth(\'' + tab + '\',1)" ' + nextOff + ' aria-label="Next month">&#8250;</button>' +
+    '</div>';
 }
 
 /** Return true when monthKey ("YYYY-MM") is strictly before the current calendar month */
@@ -500,6 +518,50 @@ window.cancelPin = function cancelPin() {
       <button class="pin-submit" style="max-width:200px;margin:0 auto;" onclick="showPinModal(() => render())">Enter PIN</button>
     </div>`;
 };
+
+/* ── Refresh app ────────────────────────────────────────────────── */
+window.refreshApp = async function refreshApp() {
+  var btn = id('refresh-btn');
+  if (btn) btn.classList.add('spinning');
+  await refreshData();
+  if (btn) btn.classList.remove('spinning');
+};
+
+/* ── Admin month picker ───────────────────────────────────────────── */
+var _pickerTab = null;
+
+window.showMonthPicker = function showMonthPicker(tab) {
+  if (accessRole !== 'admin') return;
+  _pickerTab = tab;
+  var arr  = tab === 'sunday'  ? state.sundayData
+           : tab === 'tuesday' ? state.tuesdayData
+           :                     state.specialData;
+  var idxK = tab === 'sunday'  ? 'sundayIdx'
+           : tab === 'tuesday' ? 'tuesdayIdx'
+           :                     'specialIdx';
+  var curIdx = state[idxK];
+  var grid = id('picker-months');
+  if (!grid) return;
+  grid.innerHTML = arr.map(function(m, i) {
+    return '<button class="picker-month-btn' + (i === curIdx ? ' current' : '') +
+           '" onclick="jumpToMonth(\'' + tab + '\',' + i + ')">' + esc(m.month) + '</button>';
+  }).join('');
+  id('month-picker').classList.remove('hidden');
+};
+
+window.jumpToMonth = function jumpToMonth(tab, idx) {
+  var idxK = tab === 'sunday'  ? 'sundayIdx'
+           : tab === 'tuesday' ? 'tuesdayIdx'
+           :                     'specialIdx';
+  state[idxK] = idx;
+  id('month-picker').classList.add('hidden');
+  render();
+};
+
+window.closePicker = function closePicker() {
+  id('month-picker').classList.add('hidden');
+};
+
 
 /** Allow Enter key to submit PIN */
 document.addEventListener('keydown', e => {

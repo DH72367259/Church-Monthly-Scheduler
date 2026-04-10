@@ -31,6 +31,7 @@
         <h1 class="app-title">Peter Foundation</h1>
         <p class="app-subtitle" id="header-tab-label">Sunday Services</p>
       </div>
+      <button class="refresh-btn" id="refresh-btn" aria-label="Refresh" onclick="refreshApp()">&#8635;</button>
     </header>
 
     <!-- ── Side drawer ──────────────────────────────────────────────── -->
@@ -83,5 +84,15 @@
     </div>
   </div>
   <script src="js/app.js"></script>
+  <!-- ── Month picker overlay ─────────────────────────────────────────────── -->
+  <div class="picker-overlay hidden" id="month-picker">
+    <div class="picker-box">
+      <div class="picker-header">
+        <span class="picker-title">Jump to Month</span>
+        <button class="picker-close" onclick="closePicker()" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="picker-grid" id="picker-months"></div>
+    </div>
+  </div>
 </body>
 </html>

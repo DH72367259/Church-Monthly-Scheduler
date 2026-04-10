@@ -68,6 +68,7 @@ body {
   font-weight: 700;
   letter-spacing: -.3px;
   line-height: 1.1;
+  flex: 1;
 }
 
 .app-subtitle {
@@ -77,7 +78,120 @@ body {
   font-weight: 400;
 }
 
-/* ─── Header hamburger button ─────────────────────────────────────────────── */
+/* ─── Header refresh button ───────────────────────────────────────────────── */
+.refresh-btn {
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px 0 4px 8px;
+  line-height: 1;
+  opacity: .85;
+  transition: opacity .15s, transform .3s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.refresh-btn:active { opacity: 1; }
+.refresh-btn.spinning { animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── hidden-tab: for viewer when month has no data ──────────────────────── */
+.hidden-tab { display: none !important; }
+
+/* ─── Month picker overlay ────────────────────────────────────────────────── */
+.picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 24px;
+}
+.picker-overlay.hidden { display: none; }
+
+.picker-box {
+  background: var(--white);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  overflow: hidden;
+  animation: slideUp .2s ease;
+}
+
+.picker-header {
+  background: var(--blue);
+  color: var(--white);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.picker-title { font-size: 16px; font-weight: 700; }
+.picker-close {
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.picker-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 16px;
+}
+
+.picker-month-btn {
+  padding: 14px 10px;
+  border: 2px solid var(--gray-200);
+  border-radius: 12px;
+  background: var(--gray-50);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-700);
+  cursor: pointer;
+  text-align: center;
+  transition: background .15s, border-color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.picker-month-btn:active { background: var(--blue-light); }
+.picker-month-btn.current {
+  border-color: var(--blue);
+  background: var(--blue-light);
+  color: var(--blue);
+  font-weight: 700;
+}
+
+/* Make month nav month name a button for admin */
+.month-name-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-900);
+  text-align: center;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background .15s;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.month-name-btn:active { background: var(--gray-100); }
+.picker-hint { font-size: 11px; opacity: .6; }
+
+
 .hamburger-btn {
   background: none;
   border: none;
