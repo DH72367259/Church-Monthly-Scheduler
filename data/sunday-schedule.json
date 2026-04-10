@@ -29,12 +29,22 @@
       },
       {
         "time": "Sun 9:30 AM",
+        "location": "Kachohally",
+        "programs": [
+          { "role": "Incharge",       "weeks": ["John",    "Anand",     "Raju",      "Raja",      "John"] },
+          { "role": "Praise Worship", "weeks": ["Girish",  "Darshan",   "Nalini",    "Deepa",     "Nalini"] },
+          { "role": "Choir",          "weeks": ["Girish",  "Darshan",   "Nalini",    "Deepa",     "Nalini"] },
+          { "role": "Sermon By",      "weeks": ["Jude",    "Mudi Alba", "Mudi Alba", "Mudi Alba", "Mudi Alba"] },
+          { "role": "Translation",    "weeks": ["Darshan", "Nalina",    "Nalina",    "Nalina",    "Nalina"] }
+        ]
+      },
+      {
+        "time": "Sun 9:30 AM",
         "location": "Girigowdana",
         "programs": [
-          { "role": "Incharge",       "weeks": ["Mohan",      "John",       "Mohan",     "Mohan",      "John"] },
-          { "role": "Translation",    "weeks": ["sis.Nalina", "sis.Nalina", "sis.Nalina","Ms.Nalina",  "Ms.Nalina"] },
-          { "role": "Sermon By",      "weeks": ["Mudi",       "Mudi",       "Mudi",      "Mudi",       "Mudi"] },
-          { "role": "Preaching",      "weeks": ["Mohan",      "Mohan",      "Mohan",     "Mohan",      "Mohan"] }
+          { "role": "Incharge",    "weeks": ["Mohan",      "Mohan",      "Mohan",      "Mohan",      "Mohan"] },
+          { "role": "Sermon By",   "weeks": ["Mohan",      "John",       "Pradeep",    "Mohan",      "John"] },
+          { "role": "Translation", "weeks": ["sis.Nalina", "sis.Nalina", "sis.Nalina", "Ms.Nalina",  "Ms.Nalina"] }
         ]
       }
     ]
