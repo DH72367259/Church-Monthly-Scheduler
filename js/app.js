@@ -8,7 +8,7 @@
    ADMIN_HASH  : admin — all months + Admin badge.
    ══════════════════════════════════════════════════════════════════════════ */
 const VIEWER_HASH = '7599dc4548df450045cf9bc258c43c654ea6d4af04074eb0292262e3d5187d5b';
-const ADMIN_HASH  = '594686bcfe8a1c52aa5c6ab2feadeac31c7fbc9815ad68487b60d946a12e4765';
+const ADMIN_HASH  = '120e90dfb21d132a40c6281f8c8f25331969559e200f589bfe8e775e333b5b3a';
 
 /* ── GitHub API config (for publish toggle) ──────────────────────────────── */
 const GH_OWNER     = 'DH72367259';
