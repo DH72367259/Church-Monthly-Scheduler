@@ -292,8 +292,26 @@ function isPublishedFor(m) {
 /** Keep admin-only controls hidden for non-admin roles */
 function syncAdminControls() {
   var dlBtn = id('download-btn');
-  if (!dlBtn) return;
-  dlBtn.classList.toggle('admin-visible', accessRole === 'admin');
+  if (accessRole !== 'admin') {
+    if (dlBtn) dlBtn.remove();
+    return;
+  }
+
+  /* Admin: ensure the button exists even if stale cached HTML removed it */
+  if (!dlBtn) {
+    var header = document.querySelector('.app-header');
+    if (!header) return;
+    dlBtn = document.createElement('button');
+    dlBtn.className = 'download-btn admin-visible';
+    dlBtn.id = 'download-btn';
+    dlBtn.setAttribute('aria-label', 'Download / Print');
+    dlBtn.innerHTML = '&#8597;';
+    dlBtn.onclick = window.downloadSchedule;
+    header.appendChild(dlBtn);
+    return;
+  }
+
+  dlBtn.classList.add('admin-visible');
 }
 
 /* ── Render dispatcher ──────────────────────────────────────────────── */
