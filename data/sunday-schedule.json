@@ -16,18 +16,6 @@
         ]
       },
       {
-        "time": "Sun 9:00 AM",
-        "location": "Kachohally",
-        "programs": [
-          { "role": "Incharge",       "weeks": ["John",    "Darshan",  "Mohan",    "Rajesh",  ""] },
-          { "role": "Choir",          "weeks": ["Jude",    "Darshan",  "Nalini",   "Nalini",  ""] },
-          { "role": "Praise Worship", "weeks": ["Girisha", "Pas.Anand","Nalini",   "Deepa",   ""] },
-          { "role": "Sermon By",      "weeks": ["John",    "Anand",    "Nalini",   "Deepa",   "John"] },
-          { "role": "Translation",    "weeks": ["Darshan", "Darshan",  "Mudi",     "Mudialba","Mudi"] },
-          { "role": "Preaching",      "weeks": ["Mohan",   "Mohan",    "Mohan",    "Pradeep", "Mohan"] }
-        ]
-      },
-      {
         "time": "Sun 9:30 AM",
         "location": "Kachohally",
         "programs": [
@@ -63,17 +51,6 @@
           { "role": "Choir",          "weeks": ["Mohan",   "Saravana", "Deepa",  "Nalini"] },
           { "role": "Sermon By",      "weeks": ["Jude",    "MudiAlba", "John",   "Pradeep"] },
           { "role": "Translation",    "weeks": ["Darshan", "Anand",    "Anand",  "Rajesh"] }
-        ]
-      },
-      {
-        "time": "Sun 9:00 AM",
-        "location": "Kachohally",
-        "programs": [
-          { "role": "Incharge",       "weeks": ["Darshan",  "Mohan",    "Darshan",  "Mohan"] },
-          { "role": "Choir",          "weeks": ["Jude",     "Anand",    "Nalini",   "Pradeep"] },
-          { "role": "Praise Worship", "weeks": ["Pas.Anand","MUDIALBA", "Pas.Anand","Rajesh"] },
-          { "role": "Sermon By",      "weeks": ["Anand",    "Saravanan","John",     "Deepa"] },
-          { "role": "Translation",    "weeks": ["Anand",    "Nalini",   "Nalini",   "Mudi"] }
         ]
       },
       {
@@ -116,15 +93,14 @@
         ]
       },
       {
-        "time": "Sun 9:00 AM",
+        "time": "Sun 9:30 AM",
         "location": "Kachohally",
         "programs": [
           { "role": "Incharge",       "weeks": ["", "", "", "", ""] },
-          { "role": "Choir",          "weeks": ["", "", "", "", ""] },
           { "role": "Praise Worship", "weeks": ["", "", "", "", ""] },
+          { "role": "Choir",          "weeks": ["", "", "", "", ""] },
           { "role": "Sermon By",      "weeks": ["", "", "", "", ""] },
-          { "role": "Translation",    "weeks": ["", "", "", "", ""] },
-          { "role": "Preaching",      "weeks": ["", "", "", "", ""] }
+          { "role": "Translation",    "weeks": ["", "", "", "", ""] }
         ]
       },
       {
