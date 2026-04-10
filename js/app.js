@@ -293,7 +293,7 @@ function isPublishedFor(m) {
 function syncAdminControls() {
   var dlBtn = id('download-btn');
   if (!dlBtn) return;
-  dlBtn.classList.toggle('hidden', accessRole !== 'admin');
+  dlBtn.classList.toggle('admin-visible', accessRole === 'admin');
 }
 
 /* ── Render dispatcher ──────────────────────────────────────────────── */

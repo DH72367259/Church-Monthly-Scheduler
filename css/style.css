@@ -108,8 +108,10 @@ body {
   transition: opacity .15s;
   -webkit-tap-highlight-color: transparent;
   flex-shrink: 0;
+  display: none;
 }
 .download-btn:active { opacity: 1; }
+.download-btn.admin-visible { display: inline-block; }
 
 /* ─── utility hidden class ──────────────────────────────────────────────── */
 .hidden { display: none !important; }
