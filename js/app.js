@@ -498,6 +498,13 @@ window.submitPin = async function submitPin() {
   }
   if (hash === ADMIN_HASH) {
     accessRole = 'admin';
+    /* Reset to first non-past (current) month on login */
+    const _asi = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+    if (_asi >= 0) state.sundayIdx = _asi;
+    const _ati = state.tuesdayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+    if (_ati >= 0) state.tuesdayIdx = _ati;
+    const _aspi = state.specialData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+    if (_aspi >= 0) state.specialIdx = _aspi;
   } else if (hash === VIEWER_HASH) {
     accessRole = 'viewer';
     /* Reset to first non-past (current) month on login */
@@ -532,6 +539,7 @@ window.cancelPin = function cancelPin() {
 
 /* ── Refresh app ────────────────────────────────────────────────── */
 window.refreshApp = async function refreshApp() {
+  if (!accessRole) return; /* no PIN entered yet */
   var btn = id('refresh-btn');
   if (btn) btn.classList.add('spinning');
   await refreshData();
