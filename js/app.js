@@ -124,7 +124,7 @@ async function loadData() {
 }
 
 /** Silently re-fetch JSON data in the background and re-render if anything changed */
-async function refreshData() {
+async function refreshData(forceRender) {
   try {
     const ts = '?t=' + Date.now();
     const [sr, tr, xr] = await Promise.all([
@@ -137,13 +137,15 @@ async function refreshData() {
     const newTuesday = await tr.json();
     const newSpecial = xr.ok ? await xr.json() : state.specialData;
 
-    /* Only re-render if data actually changed */
-    if (JSON.stringify(newSunday)  !== JSON.stringify(state.sundayData)  ||
-        JSON.stringify(newTuesday) !== JSON.stringify(state.tuesdayData) ||
-        JSON.stringify(newSpecial) !== JSON.stringify(state.specialData)) {
-      state.sundayData  = newSunday;
-      state.tuesdayData = newTuesday;
-      state.specialData = newSpecial;
+    const changed = JSON.stringify(newSunday)  !== JSON.stringify(state.sundayData)  ||
+                    JSON.stringify(newTuesday) !== JSON.stringify(state.tuesdayData) ||
+                    JSON.stringify(newSpecial) !== JSON.stringify(state.specialData);
+
+    state.sundayData  = newSunday;
+    state.tuesdayData = newTuesday;
+    state.specialData = newSpecial;
+
+    if (changed || forceRender) {
       refreshAllTabStates();
       render();
     }
@@ -559,18 +561,7 @@ window.refreshApp = async function refreshApp() {
   if (!accessRole) return; /* no PIN entered yet */
   var btn = id('refresh-btn');
   if (btn) btn.classList.add('spinning');
-  /* Delete all cached data files so next fetch always goes to network */
-  if ('caches' in window) {
-    try {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(async k => {
-        const cache = await caches.open(k);
-        const reqs  = await cache.keys();
-        await Promise.all(reqs.filter(r => r.url.includes('/data/')).map(r => cache.delete(r)));
-      }));
-    } catch(e) { /* silent */ }
-  }
-  await refreshData();
+  await refreshData(true);
   if (btn) btn.classList.remove('spinning');
 };
 

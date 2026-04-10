@@ -1,7 +1,7 @@
 /* ─── Church Schedule Service Worker ────────────────────────────────────── */
 'use strict';
 
-const CACHE = 'church-schedule-v25';
+const CACHE = 'church-schedule-v26';
 
 const SHELL = [
   './',
