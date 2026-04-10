@@ -66,6 +66,13 @@ function registerSW() {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     location.reload();
   });
+
+  /* Hard reload when SW explicitly signals it has updated */
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SW_UPDATED') {
+      location.reload(true);
+    }
+  });
 }
 
 /* ── Data loading ─────────────────────────────────────────────────────────── */
