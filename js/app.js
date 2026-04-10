@@ -496,6 +496,15 @@ window.submitPin = async function submitPin() {
     accessRole = 'admin';
   } else if (hash === VIEWER_HASH) {
     accessRole = 'viewer';
+    /* Default viewers to current calendar month instead of last month */
+    const _now = new Date();
+    const _curKey = _now.getFullYear() + '-' + String(_now.getMonth() + 1).padStart(2, '0');
+    const _si = state.sundayData.findIndex(function(m){ return m.monthKey === _curKey; });
+    if (_si >= 0) state.sundayIdx = _si;
+    const _ti = state.tuesdayData.findIndex(function(m){ return m.monthKey === _curKey; });
+    if (_ti >= 0) state.tuesdayIdx = _ti;
+    const _spi = state.specialData.findIndex(function(m){ return m.monthKey === _curKey; });
+    if (_spi >= 0) state.specialIdx = _spi;
   } else {
     id('pin-error').textContent = 'Incorrect PIN. Please try again.';
     id('pin-input').value = '';
