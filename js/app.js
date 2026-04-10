@@ -56,6 +56,10 @@ function registerSW() {
         }
       });
     });
+    /* Force-check for SW update every time the page becomes visible */
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') reg.update();
+    });
   }).catch(() => {/* silent */});
 
   /* Also reload if a new SW takes over while the app is already open */
