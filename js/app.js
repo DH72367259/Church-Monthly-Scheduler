@@ -154,6 +154,15 @@ window.selectTab = function selectTab(tab) {
   closeMenu();
   var btn = id('drawer-' + tab);
   if (btn && (btn.classList.contains('disabled') || btn.classList.contains('hidden-tab'))) return;
+  /* Always reset to current month when switching tabs from the drawer */
+  var arr  = tab === 'sunday'  ? state.sundayData
+           : tab === 'tuesday' ? state.tuesdayData
+           :                     state.specialData;
+  var idxK = tab === 'sunday'  ? 'sundayIdx'
+           : tab === 'tuesday' ? 'tuesdayIdx'
+           :                     'specialIdx';
+  var ci = arr.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+  if (ci >= 0) state[idxK] = ci;
   switchTab(tab);
 };
 
