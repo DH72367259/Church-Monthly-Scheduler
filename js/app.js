@@ -607,11 +607,32 @@ window.downloadSchedule = function downloadSchedule() {
           var label = sundays[i] ? sundays[i].toLocaleDateString('en-US', { month:'short', day:'numeric' }) : ('Wk '+(i+1));
           headerCells += '<th>' + htmlEsc(label) + '</th>';
         }
-        var rows = service.programs.map(function(p) {
+        /* Compute rowspan: merge consecutive rows that share the same
+           non-empty value in a given week column ("Easter Service" etc.) */
+        var numRows = service.programs.length;
+        var skipCell = [], rowspanVal = [];
+        for (var r = 0; r < numRows; r++) { skipCell[r] = {}; rowspanVal[r] = {}; }
+        for (var col = 0; col < maxWeeks; col++) {
+          var r = 0;
+          while (r < numRows) {
+            var colVal = service.programs[r].weeks[col] || '';
+            if (!colVal) { r++; continue; }
+            var span = 1;
+            while (r + span < numRows && (service.programs[r + span].weeks[col] || '') === colVal) { span++; }
+            if (span > 1) {
+              rowspanVal[r][col] = span;
+              for (var s = 1; s < span; s++) { skipCell[r + s][col] = true; }
+            }
+            r += span;
+          }
+        }
+        var rows = service.programs.map(function(p, rowIdx) {
           var cells = '<td class="role-col">' + htmlEsc(p.role) + '</td>';
           for (var i = 0; i < maxWeeks; i++) {
+            if (skipCell[rowIdx][i]) continue;
             var val = p.weeks[i];
-            cells += val ? '<td>' + htmlEsc(val) + '</td>' : '<td class="empty">—</td>';
+            var rs = rowspanVal[rowIdx][i] ? ' rowspan="' + rowspanVal[rowIdx][i] + '" style="vertical-align:middle;text-align:center;background:#eef2ff;font-style:italic;"' : '';
+            cells += val ? '<td' + rs + '>' + htmlEsc(val) + '</td>' : '<td class="empty">—</td>';
           }
           return '<tr>' + cells + '</tr>';
         }).join('');
