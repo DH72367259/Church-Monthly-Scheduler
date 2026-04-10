@@ -217,13 +217,9 @@ window.navigateMonth = function navigateMonth(tab, dir) {
              : tab === 'tuesday' ? 'tuesdayIdx'
              :                     'specialIdx';
   const next = clamp(state[idxK] + dir, 0, arr.length - 1);
-  /* Viewer: cannot navigate to past months at all */
+  /* Viewer: cannot navigate to strictly past months */
   if (accessRole === 'viewer' && isPastMonth(arr[next]?.monthKey)) return;
-  /* Going backward into an archived (past) month — only admin may view */
-  if (dir < 0 && isPastMonth(arr[next]?.monthKey) && accessRole !== 'admin') {
-    showPinModal(() => { state[idxK] = next; render(); });
-    return;
-  }
+  /* Admin going backward into a past month: allow freely */
 
   state[idxK] = next;
   render();
@@ -438,20 +434,20 @@ function monthNavHTML(idx, total, tab, monthName, monthKey) {
                : state.specialData;
   const prevIdx = idx - 1;
 
-  /* Viewer: prev button completely hidden (they only see current + future months) */
+  /* Viewer: prev disabled only if the previous month is a past month */
   const viewerMode = (accessRole === 'viewer');
-  const prevIsArchived = prevIdx >= 0 && isPastMonth(arr[prevIdx]?.monthKey) && accessRole !== 'admin';
-  const prevOff = (idx === 0 || viewerMode || prevIsArchived) ? 'disabled' : '';
+  const prevIsArchived = prevIdx >= 0 && isPastMonth(arr[prevIdx]?.monthKey);
+  const prevOff = (idx === 0 || (viewerMode && prevIsArchived) || (!viewerMode && accessRole !== 'admin' && prevIsArchived)) ? 'disabled' : '';
   const nextOff = idx >= total - 1 ? 'disabled' : '';
 
-  const archiveLock = prevIsArchived && !viewerMode ? ' 🔒' : '';
+  const archiveLock = prevIsArchived && !viewerMode && accessRole === 'admin' ? ' 🔒' : '';
 
   /* Access badge */
   let roleBadge = '';
   if (accessRole === 'admin')  roleBadge = '<span class="role-badge admin-badge">Admin</span>';
   if (accessRole === 'viewer') roleBadge = '<span class="role-badge viewer-badge">Viewer</span>';
 
-  const prevHidden = viewerMode ? 'style="visibility:hidden"' : '';
+  const prevHidden = (viewerMode && prevIsArchived) ? 'style="visibility:hidden"' : '';
 
   var monthEl = accessRole === 'admin'
     ? '<button class="month-name-btn" onclick="showMonthPicker(\'' + tab + '\')" aria-label="Pick month">' + esc(monthName) + roleBadge + '<span class="picker-hint">&#9660;</span></button>'
