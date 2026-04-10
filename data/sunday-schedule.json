@@ -30,9 +30,8 @@
         "time": "Sun 9:30 AM",
         "location": "Girigowdana",
         "programs": [
-          { "role": "Incharge",    "weeks": ["Mohan",      "Mohan",      "Mohan",      "Mohan",      "Mohan"] },
-          { "role": "Sermon By",   "weeks": ["Mohan",      "John",       "Pradeep",    "Mohan",      "John"] },
-          { "role": "Translation", "weeks": ["sis.Nalina", "sis.Nalina", "sis.Nalina", "Ms.Nalina",  "Ms.Nalina"] }
+          { "role": "Incharge",  "weeks": ["Mohan", "Mohan",   "Mohan",   "Mohan", "Mohan"] },
+          { "role": "Sermon By", "weeks": ["Mohan", "John",    "Pradeep", "Mohan",  "John"] }
         ]
       }
     ]
@@ -68,9 +67,8 @@
         "time": "Sun 9:30 AM",
         "location": "Girigowdana",
         "programs": [
-          { "role": "Incharge",    "weeks": ["Easter Service", "Mohan",      "Mohan",      "Mohan"] },
-          { "role": "Sermon By",   "weeks": ["Easter Service", "John",       "Pradeep",    "Mohan"] },
-          { "role": "Translation", "weeks": ["",               "sis.Nalina", "sis.Nalina", "Ms.Nalina"] }
+          { "role": "Incharge",  "weeks": ["Easter Service", "Mohan", "Mohan",   "Mohan"] },
+          { "role": "Sermon By",   "weeks": ["Easter Service", "John",  "Pradeep", "Mohan"] }
         ]
       }
     ]
@@ -107,10 +105,8 @@
         "time": "Sun 9:30 AM",
         "location": "Girigowdana",
         "programs": [
-          { "role": "Incharge",    "weeks": ["", "", "", "", ""] },
-          { "role": "Translation", "weeks": ["", "", "", "", ""] },
-          { "role": "Sermon By",   "weeks": ["", "", "", "", ""] },
-          { "role": "Preaching",   "weeks": ["", "", "", "", ""] }
+          { "role": "Incharge",  "weeks": ["", "", "", "", ""] },
+          { "role": "Sermon By",   "weeks": ["", "", "", "", ""] }
         ]
       }
     ]
