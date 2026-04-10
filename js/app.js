@@ -40,6 +40,7 @@ const state = {
 
 /* ── Bootstrap ────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
+  syncAdminControls();
   loadData();
   registerSW();
 
@@ -288,8 +289,16 @@ function isPublishedFor(m) {
   return m.published !== false; /* missing field = legacy, treat as published */
 }
 
+/** Keep admin-only controls hidden for non-admin roles */
+function syncAdminControls() {
+  var dlBtn = id('download-btn');
+  if (!dlBtn) return;
+  dlBtn.classList.toggle('hidden', accessRole !== 'admin');
+}
+
 /* ── Render dispatcher ──────────────────────────────────────────────── */
 function render() {
+  syncAdminControls();
   updateDrawerState(state.tab);
   if      (state.tab === 'sunday')  renderSunday();
   else if (state.tab === 'tuesday') renderTuesday();
@@ -765,8 +774,6 @@ window.submitPin = async function submitPin() {
   }
   if (hash === ADMIN_HASH) {
     accessRole = 'admin';
-    var _dlBtn = id('download-btn');
-    if (_dlBtn) _dlBtn.classList.remove('hidden');
     /* Reset to first non-past (current) month on login */
     const _asi = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
     if (_asi >= 0) state.sundayIdx = _asi;
@@ -778,9 +785,6 @@ window.submitPin = async function submitPin() {
     if (_afi >= 0) state.fastingIdx = _afi;
   } else if (hash === VIEWER_HASH) {
     accessRole = 'viewer';
-    /* Ensure download button stays hidden for viewers */
-    var _dlBtnV = id('download-btn');
-    if (_dlBtnV) _dlBtnV.classList.add('hidden');
     /* For viewer: default to first PUBLISHED non-past month */
     function _firstVisible(arr) {
       var i = arr.findIndex(function(m){ return !isPastMonth(m.monthKey) && m.published !== false; });
@@ -799,6 +803,7 @@ window.submitPin = async function submitPin() {
     id('pin-input').focus();
     return;
   }
+  syncAdminControls();
   id('pin-modal').classList.add('hidden');
   if (_pinCallback) { _pinCallback(); _pinCallback = null; }
 };
