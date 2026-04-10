@@ -8,13 +8,27 @@
    ADMIN_HASH  : admin — all months + Admin badge.
    ══════════════════════════════════════════════════════════════════════════ */
 const VIEWER_HASH = '7599dc4548df450045cf9bc258c43c654ea6d4af04074eb0292262e3d5187d5b';
-const ADMIN_HASH  = '120e90dfb21d132a40c6281f8c8f25331969559e200f589bfe8e775e333b5b3a';
+const ADMIN_HASH  = '594686bcfe8a1c52aa5c6ab2feadeac31c7fbc9815ad68487b60d946a12e4765';
 
 /* ── GitHub API config (for publish toggle) ──────────────────────────────── */
 const GH_OWNER     = 'DH72367259';
 const GH_REPO      = 'Church-Monthly-Scheduler';
 const GH_BRANCH    = 'main';
 const GH_TOKEN_KEY = 'pf_gh_token'; /* localStorage key — stays on this device */
+
+/* ── Admin one-session lock (browser-level) ─────────────────────────────── */
+const ADMIN_LOCK_KEY        = 'pf_admin_lock';
+const ADMIN_LOCK_TTL_MS     = 90000; /* stale lock expires after 90s */
+const ADMIN_HEARTBEAT_MS    = 15000;
+const ADMIN_SESSION_ID_KEY  = 'pf_admin_session_id';
+const ADMIN_SESSION_ID      = (function() {
+  var sid = sessionStorage.getItem(ADMIN_SESSION_ID_KEY);
+  if (sid) return sid;
+  sid = 'adm_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+  sessionStorage.setItem(ADMIN_SESSION_ID_KEY, sid);
+  return sid;
+})();
+let _adminHeartbeatTimer = null;
 
 /** SHA-256 hash of a string via Web Crypto API */
 async function sha256(text) {
@@ -50,7 +64,79 @@ document.addEventListener('DOMContentLoaded', () => {
       refreshData();
     }
   });
+
+  /* Release lock when this app session is closed or backgrounded away */
+  window.addEventListener('beforeunload', releaseAdminLock);
+  window.addEventListener('pagehide', releaseAdminLock);
 });
+
+function _readAdminLock() {
+  try {
+    var raw = localStorage.getItem(ADMIN_LOCK_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+function _isAdminLockActive(lock) {
+  if (!lock || !lock.ownerId || !lock.lastSeen) return false;
+  return (Date.now() - lock.lastSeen) < ADMIN_LOCK_TTL_MS;
+}
+
+function _writeAdminLock(lockObj) {
+  localStorage.setItem(ADMIN_LOCK_KEY, JSON.stringify(lockObj));
+}
+
+function _startAdminHeartbeat() {
+  if (_adminHeartbeatTimer) clearInterval(_adminHeartbeatTimer);
+  _adminHeartbeatTimer = setInterval(function() {
+    if (accessRole !== 'admin') return;
+    var lock = _readAdminLock();
+    if (!lock || lock.ownerId !== ADMIN_SESSION_ID) return;
+    lock.lastSeen = Date.now();
+    _writeAdminLock(lock);
+  }, ADMIN_HEARTBEAT_MS);
+}
+
+function _stopAdminHeartbeat() {
+  if (_adminHeartbeatTimer) {
+    clearInterval(_adminHeartbeatTimer);
+    _adminHeartbeatTimer = null;
+  }
+}
+
+function tryAcquireAdminLock() {
+  var lock = _readAdminLock();
+  if (_isAdminLockActive(lock) && lock.ownerId !== ADMIN_SESSION_ID) {
+    return false;
+  }
+
+  var mine = {
+    ownerId:  ADMIN_SESSION_ID,
+    lastSeen: Date.now()
+  };
+  _writeAdminLock(mine);
+
+  /* Verify ownership after write */
+  var verify = _readAdminLock();
+  if (!verify || verify.ownerId !== ADMIN_SESSION_ID) {
+    return false;
+  }
+
+  _startAdminHeartbeat();
+  return true;
+}
+
+function releaseAdminLock() {
+  if (accessRole !== 'admin') return;
+  var lock = _readAdminLock();
+  if (lock && lock.ownerId === ADMIN_SESSION_ID) {
+    localStorage.removeItem(ADMIN_LOCK_KEY);
+  }
+  _stopAdminHeartbeat();
+}
 
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
@@ -791,6 +877,12 @@ window.submitPin = async function submitPin() {
     return;
   }
   if (hash === ADMIN_HASH) {
+    if (!tryAcquireAdminLock()) {
+      id('pin-error').textContent = 'Admin is already logged in on another active session. Try again after that session closes.';
+      id('pin-input').value = '';
+      id('pin-input').focus();
+      return;
+    }
     accessRole = 'admin';
     /* Reset to first non-past (current) month on login */
     const _asi = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
