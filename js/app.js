@@ -564,20 +564,20 @@ window.showMonthPicker = function showMonthPicker(tab) {
            : tab === 'tuesday' ? 'tuesdayIdx'
            :                     'specialIdx';
   var curIdx = state[idxK];
-  var grid = id('picker-months');
-  if (!grid) return;
-  grid.innerHTML = arr.map(function(m, i) {
-    return '<button class="picker-month-btn' + (i === curIdx ? ' current' : '') +
-           '" onclick="jumpToMonth(\'' + tab + '\',' + i + ')">' + esc(m.month) + '</button>';
+  var sel = id('picker-select');
+  if (!sel) return;
+  sel.innerHTML = arr.map(function(m, i) {
+    return '<option value="' + i + '"' + (i === curIdx ? ' selected' : '') + '>' + esc(m.month) + '</option>';
   }).join('');
   id('month-picker').classList.remove('hidden');
 };
 
-window.jumpToMonth = function jumpToMonth(tab, idx) {
-  var idxK = tab === 'sunday'  ? 'sundayIdx'
-           : tab === 'tuesday' ? 'tuesdayIdx'
-           :                     'specialIdx';
-  state[idxK] = idx;
+window.jumpToMonth = function jumpToMonth() {
+  var sel  = id('picker-select');
+  var idxK = _pickerTab === 'sunday'  ? 'sundayIdx'
+           : _pickerTab === 'tuesday' ? 'tuesdayIdx'
+           :                            'specialIdx';
+  state[idxK] = parseInt(sel.value, 10);
   id('month-picker').classList.add('hidden');
   render();
 };

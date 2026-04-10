@@ -91,7 +91,10 @@
         <span class="picker-title">Jump to Month</span>
         <button class="picker-close" onclick="closePicker()" aria-label="Close">&#10005;</button>
       </div>
-      <div class="picker-grid" id="picker-months"></div>
+      <div class="picker-body">
+        <select id="picker-select" class="picker-select"></select>
+        <button class="picker-go" onclick="jumpToMonth()">Go</button>
+      </div>
     </div>
   </div>
 </body>
