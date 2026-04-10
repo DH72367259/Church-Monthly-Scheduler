@@ -559,6 +559,17 @@ window.refreshApp = async function refreshApp() {
   if (!accessRole) return; /* no PIN entered yet */
   var btn = id('refresh-btn');
   if (btn) btn.classList.add('spinning');
+  /* Delete all cached data files so next fetch always goes to network */
+  if ('caches' in window) {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(async k => {
+        const cache = await caches.open(k);
+        const reqs  = await cache.keys();
+        await Promise.all(reqs.filter(r => r.url.includes('/data/')).map(r => cache.delete(r)));
+      }));
+    } catch(e) { /* silent */ }
+  }
   await refreshData();
   if (btn) btn.classList.remove('spinning');
 };
