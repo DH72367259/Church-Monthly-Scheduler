@@ -86,17 +86,15 @@ async function loadData() {
       state.specialData = await xr.json();
     }
 
-    /* Default each tab to the current calendar month, fall back to last */
-    const _defaultNow = new Date();
-    const _defaultKey = _defaultNow.getFullYear() + '-' + String(_defaultNow.getMonth() + 1).padStart(2,'0');
-    const _si = state.sundayData.findIndex(function(m){ return m.monthKey === _defaultKey; });
-    state.sundayIdx  = _si >= 0 ? _si : Math.max(0, state.sundayData.length  - 1);
-    const _ti = state.tuesdayData.findIndex(function(m){ return m.monthKey === _defaultKey; });
-    state.tuesdayIdx = _ti >= 0 ? _ti : Math.max(0, state.tuesdayData.length - 1);
+    /* Default each tab to the first non-past month (current month), fall back to last */
+    const _si = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+    state.sundayIdx  = _si  >= 0 ? _si  : Math.max(0, state.sundayData.length  - 1);
+    const _ti = state.tuesdayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+    state.tuesdayIdx = _ti  >= 0 ? _ti  : Math.max(0, state.tuesdayData.length - 1);
 
-    /* Special Days tab: prefer current month, then first month with events, else last */
-    const _spi = state.specialData.findIndex(function(m){ return m.monthKey === _defaultKey; });
-    const _firstWithEvents = state.specialData.findIndex(m => m.events && m.events.length > 0);
+    /* Special Days: prefer first non-past month, then first with events, else last */
+    const _spi = state.specialData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+    const _firstWithEvents = state.specialData.findIndex(function(m){ return m.events && m.events.length > 0; });
     state.specialIdx = _spi >= 0 ? _spi : (_firstWithEvents >= 0 ? _firstWithEvents : Math.max(0, state.specialData.length - 1));
 
     /* Enable/disable the Special Days tab based on whether ANY events exist */
@@ -502,14 +500,12 @@ window.submitPin = async function submitPin() {
     accessRole = 'admin';
   } else if (hash === VIEWER_HASH) {
     accessRole = 'viewer';
-    /* Default viewers to current calendar month instead of last month */
-    const _now = new Date();
-    const _curKey = _now.getFullYear() + '-' + String(_now.getMonth() + 1).padStart(2, '0');
-    const _si = state.sundayData.findIndex(function(m){ return m.monthKey === _curKey; });
+    /* Reset to first non-past (current) month on login */
+    const _si = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
     if (_si >= 0) state.sundayIdx = _si;
-    const _ti = state.tuesdayData.findIndex(function(m){ return m.monthKey === _curKey; });
+    const _ti = state.tuesdayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
     if (_ti >= 0) state.tuesdayIdx = _ti;
-    const _spi = state.specialData.findIndex(function(m){ return m.monthKey === _curKey; });
+    const _spi = state.specialData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
     if (_spi >= 0) state.specialIdx = _spi;
   } else {
     id('pin-error').textContent = 'Incorrect PIN. Please try again.';
