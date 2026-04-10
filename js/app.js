@@ -86,13 +86,18 @@ async function loadData() {
       state.specialData = await xr.json();
     }
 
-    /* Default each tab to its latest month */
-    state.sundayIdx  = Math.max(0, state.sundayData.length  - 1);
-    state.tuesdayIdx = Math.max(0, state.tuesdayData.length - 1);
+    /* Default each tab to the current calendar month, fall back to last */
+    const _defaultNow = new Date();
+    const _defaultKey = _defaultNow.getFullYear() + '-' + String(_defaultNow.getMonth() + 1).padStart(2,'0');
+    const _si = state.sundayData.findIndex(function(m){ return m.monthKey === _defaultKey; });
+    state.sundayIdx  = _si >= 0 ? _si : Math.max(0, state.sundayData.length  - 1);
+    const _ti = state.tuesdayData.findIndex(function(m){ return m.monthKey === _defaultKey; });
+    state.tuesdayIdx = _ti >= 0 ? _ti : Math.max(0, state.tuesdayData.length - 1);
 
-    /* Special Days tab: default to the first month that has events, else last month */
-    const firstWithEvents = state.specialData.findIndex(m => m.events && m.events.length > 0);
-    state.specialIdx = firstWithEvents >= 0 ? firstWithEvents : Math.max(0, state.specialData.length - 1);
+    /* Special Days tab: prefer current month, then first month with events, else last */
+    const _spi = state.specialData.findIndex(function(m){ return m.monthKey === _defaultKey; });
+    const _firstWithEvents = state.specialData.findIndex(m => m.events && m.events.length > 0);
+    state.specialIdx = _spi >= 0 ? _spi : (_firstWithEvents >= 0 ? _firstWithEvents : Math.max(0, state.specialData.length - 1));
 
     /* Enable/disable the Special Days tab based on whether ANY events exist */
     refreshAllTabStates();
