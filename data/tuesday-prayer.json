@@ -3,18 +3,21 @@
     "month": "March 2026",
     "monthKey": "2026-03",
     "notes": "",
-    "tuesdays": []
+    "tuesdays": [],
+    "published": true
   },
   {
     "month": "April 2026",
     "monthKey": "2026-04",
     "notes": "",
-    "tuesdays": []
+    "tuesdays": [],
+    "published": true
   },
   {
     "month": "May 2026",
     "monthKey": "2026-05",
     "notes": "",
-    "tuesdays": []
+    "tuesdays": [],
+    "published": false
   }
 ]

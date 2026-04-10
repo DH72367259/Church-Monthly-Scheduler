@@ -17,16 +17,19 @@
         "time": "10:00 AM",
         "location": "Kachohally"
       }
-    ]
+    ],
+    "published": true
   },
   {
     "month": "March 2026",
     "monthKey": "2026-03",
-    "events": []
+    "events": [],
+    "published": true
   },
   {
     "month": "May 2026",
     "monthKey": "2026-05",
-    "events": []
+    "events": [],
+    "published": false
   }
 ]

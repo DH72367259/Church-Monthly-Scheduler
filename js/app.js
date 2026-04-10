@@ -10,6 +10,12 @@
 const VIEWER_HASH = '7599dc4548df450045cf9bc258c43c654ea6d4af04074eb0292262e3d5187d5b';
 const ADMIN_HASH  = '120e90dfb21d132a40c6281f8c8f25331969559e200f589bfe8e775e333b5b3a';
 
+/* ── GitHub API config (for publish toggle) ──────────────────────────────── */
+const GH_OWNER     = 'DH72367259';
+const GH_REPO      = 'Church-Monthly-Scheduler';
+const GH_BRANCH    = 'main';
+const GH_TOKEN_KEY = 'pf_gh_token'; /* localStorage key — stays on this device */
+
 /** SHA-256 hash of a string via Web Crypto API */
 async function sha256(text) {
   const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -25,9 +31,11 @@ const state = {
   sundayData:   [],
   tuesdayData:  [],
   specialData:  [],
+  fastingData:  [],
   sundayIdx:    0,
   tuesdayIdx:   0,
-  specialIdx:   0
+  specialIdx:   0,
+  fastingIdx:   0
 };
 
 /* ── Bootstrap ────────────────────────────────────────────────────────────── */
@@ -81,10 +89,11 @@ async function loadData() {
   try {
     /* Cache-bust with a timestamp so admins' Git pushes are visible immediately */
     const ts = '?t=' + Date.now();
-    const [sr, tr, xr] = await Promise.all([
+    const [sr, tr, xr, fr] = await Promise.all([
       fetch('./data/sunday-schedule.json' + ts),
       fetch('./data/tuesday-prayer.json'  + ts),
-      fetch('./data/special-days.json'    + ts)
+      fetch('./data/special-days.json'    + ts),
+      fetch('./data/fasting-prayer.json'  + ts)
     ]);
     if (!sr.ok) throw new Error('sunday-schedule.json not found');
     if (!tr.ok) throw new Error('tuesday-prayer.json not found');
@@ -97,16 +106,25 @@ async function loadData() {
       state.specialData = await xr.json();
     }
 
+    /* Fasting prayer — gracefully optional */
+    if (fr.ok) {
+      state.fastingData = await fr.json();
+    }
+
     /* Default each tab to the first non-past month (current month), fall back to last */
-    const _si = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+    const _si  = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
     state.sundayIdx  = _si  >= 0 ? _si  : Math.max(0, state.sundayData.length  - 1);
-    const _ti = state.tuesdayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+    const _ti  = state.tuesdayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
     state.tuesdayIdx = _ti  >= 0 ? _ti  : Math.max(0, state.tuesdayData.length - 1);
 
     /* Special Days: prefer first non-past month, then first with events, else last */
     const _spi = state.specialData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
     const _firstWithEvents = state.specialData.findIndex(function(m){ return m.events && m.events.length > 0; });
     state.specialIdx = _spi >= 0 ? _spi : (_firstWithEvents >= 0 ? _firstWithEvents : Math.max(0, state.specialData.length - 1));
+
+    /* Fasting: first non-past month */
+    const _fi  = state.fastingData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+    state.fastingIdx = _fi >= 0 ? _fi : Math.max(0, state.fastingData.length - 1);
 
     /* Enable/disable the Special Days tab based on whether ANY events exist */
     refreshAllTabStates();
@@ -127,23 +145,27 @@ async function loadData() {
 async function refreshData(forceRender) {
   try {
     const ts = '?t=' + Date.now();
-    const [sr, tr, xr] = await Promise.all([
+    const [sr, tr, xr, fr] = await Promise.all([
       fetch('./data/sunday-schedule.json' + ts),
       fetch('./data/tuesday-prayer.json'  + ts),
-      fetch('./data/special-days.json'    + ts)
+      fetch('./data/special-days.json'    + ts),
+      fetch('./data/fasting-prayer.json'  + ts)
     ]);
     if (!sr.ok || !tr.ok) return; /* silently skip on network error */
     const newSunday  = await sr.json();
     const newTuesday = await tr.json();
     const newSpecial = xr.ok ? await xr.json() : state.specialData;
+    const newFasting = fr.ok ? await fr.json() : state.fastingData;
 
     const changed = JSON.stringify(newSunday)  !== JSON.stringify(state.sundayData)  ||
                     JSON.stringify(newTuesday) !== JSON.stringify(state.tuesdayData) ||
-                    JSON.stringify(newSpecial) !== JSON.stringify(state.specialData);
+                    JSON.stringify(newSpecial) !== JSON.stringify(state.specialData) ||
+                    JSON.stringify(newFasting) !== JSON.stringify(state.fastingData);
 
     state.sundayData  = newSunday;
     state.tuesdayData = newTuesday;
     state.specialData = newSpecial;
+    state.fastingData = newFasting;
 
     if (changed || forceRender) {
       refreshAllTabStates();
@@ -167,49 +189,62 @@ window.selectTab = function selectTab(tab) {
   closeMenu();
   var btn = id('drawer-' + tab);
   if (btn && (btn.classList.contains('disabled') || btn.classList.contains('hidden-tab'))) return;
-  /* Always reset to current month when switching tabs from the drawer */
-  var arr  = tab === 'sunday'  ? state.sundayData
-           : tab === 'tuesday' ? state.tuesdayData
-           :                     state.specialData;
-  var idxK = tab === 'sunday'  ? 'sundayIdx'
-           : tab === 'tuesday' ? 'tuesdayIdx'
-           :                     'specialIdx';
-  var ci = arr.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+  /* Always reset to current (first non-past) month when switching tabs from the drawer */
+  var arr  = getTabArr(tab);
+  var idxK = getTabIdxKey(tab);
+  var ci = arr.findIndex(function(m){
+    return !isPastMonth(m.monthKey) && isPublishedFor(m);
+  });
   if (ci >= 0) state[idxK] = ci;
   switchTab(tab);
 };
 
 /* Sync drawer highlight and header subtitle */
 function updateDrawerState(tab) {
-  const labels = { sunday: 'Sunday Services', tuesday: 'Tuesday Prayer', special: 'Special Days' };
-  ['sunday','tuesday','special'].forEach(t => {
-    id('drawer-' + t).classList.toggle('active', t === tab);
+  const labels = { sunday: 'Sunday Services', tuesday: 'Tuesday Prayer', special: 'Special Days', fasting: 'Fasting Prayer' };
+  ['sunday','tuesday','special','fasting'].forEach(t => {
+    const btn = id('drawer-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
   });
   const label = id('header-tab-label');
   if (label) label.textContent = labels[tab] || '';
 }
 
 function refreshAllTabStates() {
-  const now = new Date();
+  const now    = new Date();
   const curKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
 
   const tuesdayBtn = id('drawer-tuesday');
   const specialBtn = id('drawer-special');
+  const fastingBtn = id('drawer-fasting');
 
   if (accessRole === 'viewer') {
+    /* Tuesday: visible if current month is published AND has sessions */
     const td = state.tuesdayData.find(function(m){ return m.monthKey === curKey; });
-    const hasTuesday = !!(td && td.tuesdays && td.tuesdays.length > 0);
+    const hasTuesday = !!(td && td.published !== false && td.tuesdays && td.tuesdays.length > 0);
     if (tuesdayBtn) tuesdayBtn.classList.toggle('hidden-tab', !hasTuesday);
 
-    const sd = state.specialData.find(function(m){ return m.monthKey === curKey; });
-    const hasSpecial = !!(sd && sd.events && sd.events.length > 0);
+    /* Special: visible if any published month has events */
+    const hasSpecial = state.specialData.some(function(m){
+      return m.published !== false && m.events && m.events.length > 0;
+    });
     if (specialBtn) specialBtn.classList.toggle('hidden-tab', !hasSpecial);
+
+    /* Fasting: visible if any published month has sessions */
+    const hasFasting = state.fastingData.some(function(m){
+      return m.published !== false && m.sessions && m.sessions.length > 0;
+    });
+    if (fastingBtn) fastingBtn.classList.toggle('hidden-tab', !hasFasting);
 
     if (!hasTuesday && state.tab === 'tuesday') { state.tab = 'sunday'; }
     if (!hasSpecial  && state.tab === 'special')  { state.tab = 'sunday'; }
+    if (!hasFasting  && state.tab === 'fasting')  { state.tab = 'sunday'; }
   } else {
+    /* Admin: always show all tabs */
     if (tuesdayBtn) tuesdayBtn.classList.remove('hidden-tab');
     if (specialBtn) specialBtn.classList.remove('hidden-tab');
+    /* Show fasting tab for admin if ANY month exists in the data */
+    if (fastingBtn) fastingBtn.classList.toggle('hidden-tab', state.fastingData.length === 0);
   }
 }
 function refreshSpecialTabState() { refreshAllTabStates(); }
@@ -223,26 +258,42 @@ window.switchTab = function switchTab(tab) {
 
 /* ── Month navigation ─────────────────────────────────────────────────────── */
 window.navigateMonth = function navigateMonth(tab, dir) {
-  const arr  = tab === 'sunday'  ? state.sundayData
-             : tab === 'tuesday' ? state.tuesdayData
-             :                     state.specialData;
-  const idxK = tab === 'sunday'  ? 'sundayIdx'
-             : tab === 'tuesday' ? 'tuesdayIdx'
-             :                     'specialIdx';
+  const arr  = getTabArr(tab);
+  const idxK = getTabIdxKey(tab);
   const next = clamp(state[idxK] + dir, 0, arr.length - 1);
-  /* Viewer: cannot navigate to strictly past months */
-  if (accessRole === 'viewer' && isPastMonth(arr[next]?.monthKey)) return;
-  /* Admin going backward into a past month: allow freely */
-
+  const m    = arr[next];
+  /* Viewer: cannot navigate to past months OR unpublished months */
+  if (accessRole === 'viewer' && (isPastMonth(m?.monthKey) || m?.published === false)) return;
+  /* Admin: can navigate freely */
   state[idxK] = next;
   render();
 };
 
-/* ── Render dispatcher ────────────────────────────────────────────────────── */
+/* ── Tab data helpers ──────────────────────────────────────────────── */
+function getTabArr(tab) {
+  if (tab === 'sunday')  return state.sundayData;
+  if (tab === 'tuesday') return state.tuesdayData;
+  if (tab === 'fasting') return state.fastingData;
+  return state.specialData;
+}
+function getTabIdxKey(tab) {
+  if (tab === 'sunday')  return 'sundayIdx';
+  if (tab === 'tuesday') return 'tuesdayIdx';
+  if (tab === 'fasting') return 'fastingIdx';
+  return 'specialIdx';
+}
+/** True if the month is visible to the current role */
+function isPublishedFor(m) {
+  if (accessRole === 'admin') return true;
+  return m.published !== false; /* missing field = legacy, treat as published */
+}
+
+/* ── Render dispatcher ──────────────────────────────────────────────── */
 function render() {
   updateDrawerState(state.tab);
   if      (state.tab === 'sunday')  renderSunday();
   else if (state.tab === 'tuesday') renderTuesday();
+  else if (state.tab === 'fasting') renderFasting();
   else                              renderSpecial();
 }
 
@@ -437,41 +488,238 @@ function renderSpecial() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
+   FASTING PRAYER
+   ══════════════════════════════════════════════════════════════════════════ */
+function renderFasting() {
+  const content = id('content');
+
+  if (!state.fastingData.length) {
+    content.innerHTML = emptyState('No fasting prayer data available.');
+    return;
+  }
+
+  /* Viewer: must not see unpublished months */
+  const data = state.fastingData[state.fastingIdx];
+  if (!data) { content.innerHTML = emptyState('No fasting prayer data available.'); return; }
+  if (accessRole === 'viewer' && data.published === false) {
+    content.innerHTML = emptyState('No fasting prayer scheduled.');
+    return;
+  }
+
+  let html = monthNavHTML(state.fastingIdx, state.fastingData.length, 'fasting', data.month, data.monthKey);
+
+  if (isPastMonth(data.monthKey)) {
+    html += archiveBanner();
+  }
+
+  if (data.notes) {
+    html += `<div class="notice-card">📌 ${esc(data.notes)}</div>`;
+  }
+
+  if (!data.sessions || data.sessions.length === 0) {
+    html += `<div class="fasting-card">
+      <div class="fasting-title-bar">&#9670;&nbsp; Fasting Prayer &mdash; ${esc(data.month)}</div>
+      ${emptyState('No fasting prayer sessions for ' + esc(data.month) + '.')}
+    </div>`;
+    content.innerHTML = html;
+    return;
+  }
+
+  const rows = data.sessions.map(s => `
+    <tr>
+      <td class="fast-date">${esc(s.date)}</td>
+      <td class="fast-day">${esc(s.day)}</td>
+      <td>${esc(s.worshipBy || '—')}</td>
+      <td>${esc(s.sermonBy || '—')}</td>
+    </tr>`).join('');
+
+  html += `
+    <div class="fasting-card">
+      <div class="fasting-title-bar">&#9670;&nbsp; Fasting Prayer &mdash; ${esc(data.month)}</div>
+      <div class="table-scroll">
+        <table class="fasting-table" role="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Day</th>
+              <th>Worship By</th>
+              <th>Sermon By</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+
+  content.innerHTML = html;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PUBLISH TOGGLE — GitHub API
+   ══════════════════════════════════════════════════════════════════════════ */
+const _GH_FILE_MAP = {
+  sunday:  'data/sunday-schedule.json',
+  tuesday: 'data/tuesday-prayer.json',
+  special: 'data/special-days.json',
+  fasting: 'data/fasting-prayer.json'
+};
+
+/** Encode a UTF-8 string to base64 (handles non-ASCII) */
+function _toBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  bytes.forEach(b => { binary += String.fromCharCode(b); });
+  return btoa(binary);
+}
+
+/**
+ * Toggle the `published` flag for a month via GitHub API.
+ * Admin only. Updates local state immediately for instant UI feedback.
+ * Changes are live for all users after GitHub Pages re-deploys (~30–60 s).
+ */
+window.togglePublish = async function togglePublish(tab, monthKey, newValue) {
+  if (accessRole !== 'admin') return;
+
+  /* Update local state immediately so UI reflects the change at once */
+  const localArr = getTabArr(tab);
+  const localMonth = localArr.find(m => m.monthKey === monthKey);
+  if (localMonth) localMonth.published = newValue;
+  refreshAllTabStates();
+  render();
+
+  /* Attempt to persist via GitHub API */
+  let token = localStorage.getItem(GH_TOKEN_KEY);
+  if (!token) {
+    token = prompt(
+      'Enter your GitHub Personal Access Token (PAT) to save this change for all users.\n\n' +
+      'Scope required: "Contents write" for ' + GH_REPO + '\n\n' +
+      'Leave empty to apply only on this device (not saved for others).'
+    );
+    if (!token || !token.trim()) return; /* user cancelled or skipped */
+    token = token.trim();
+    localStorage.setItem(GH_TOKEN_KEY, token);
+  }
+
+  const path = _GH_FILE_MAP[tab];
+  if (!path) return;
+
+  try {
+    /* GET current file content + SHA for the PUT */
+    const apiBase = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/';
+    const getResp = await fetch(apiBase + path + '?ref=' + GH_BRANCH, {
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (getResp.status === 401 || getResp.status === 403) {
+      localStorage.removeItem(GH_TOKEN_KEY);
+      alert('GitHub token is invalid or lacks permission. Please re-enter your token next time.');
+      return;
+    }
+    if (!getResp.ok) throw new Error('GitHub GET failed: ' + getResp.status);
+
+    const fileData = await getResp.json();
+    const sha      = fileData.sha;
+
+    /* Decode → update → re-encode */
+    const decoded  = new TextDecoder().decode(
+      Uint8Array.from(atob(fileData.content.replace(/\n/g, '')), c => c.charCodeAt(0))
+    );
+    const jsonArr  = JSON.parse(decoded);
+    const target   = jsonArr.find(m => m.monthKey === monthKey);
+    if (target) target.published = newValue;
+    const updated  = _toBase64(JSON.stringify(jsonArr, null, 2) + '\n');
+
+    /* PUT updated file */
+    const putResp = await fetch(apiBase + path, {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: (newValue ? 'Publish' : 'Unpublish') + ': ' + tab + ' ' + monthKey,
+        content: updated,
+        sha:     sha,
+        branch:  GH_BRANCH
+      })
+    });
+
+    if (putResp.status === 401 || putResp.status === 403) {
+      localStorage.removeItem(GH_TOKEN_KEY);
+      alert('GitHub token rejected. Please re-enter your token next time.');
+      return;
+    }
+    if (!putResp.ok) {
+      const errBody = await putResp.json().catch(() => ({}));
+      throw new Error(errBody.message || 'GitHub PUT failed: ' + putResp.status);
+    }
+    /* Success — change will propagate to all users when GitHub Pages deploys */
+  } catch (err) {
+    /* Non-fatal: local state is already updated, just warn */
+    console.warn('Publish toggle GitHub API error:', err.message);
+  }
+};
+
+/* ══════════════════════════════════════════════════════════════════════════════
    HELPERS
    ══════════════════════════════════════════════════════════════════════════ */
 
 /** Build month navigation bar HTML */
 function monthNavHTML(idx, total, tab, monthName, monthKey) {
-  const arr    = tab === 'sunday' ? state.sundayData
-               : tab === 'tuesday' ? state.tuesdayData
-               : state.specialData;
+  const arr    = getTabArr(tab);
   const prevIdx = idx - 1;
 
-  /* Viewer: prev button hidden only when previous month is in the past */
+  /* Viewer: prev button hidden when previous month is past OR unpublished */
   const viewerMode = (accessRole === 'viewer');
   const prevIsArchived = prevIdx >= 0 && isPastMonth(arr[prevIdx]?.monthKey);
-  const prevOff = (idx === 0 || prevIsArchived) ? 'disabled' : '';
-  const nextOff = idx >= total - 1 ? 'disabled' : '';
+  const prevIsBlocked  = prevIsArchived || (viewerMode && prevIdx >= 0 && arr[prevIdx]?.published === false);
+  const prevOff = (idx === 0 || prevIsBlocked) ? 'disabled' : '';
+
+  /* Viewer: next button disabled when next month is unpublished */
+  const nextMonth     = arr[idx + 1];
+  const nextUnpublished = viewerMode && nextMonth && nextMonth.published === false;
+  const nextOff = (idx >= total - 1 || nextUnpublished) ? 'disabled' : '';
 
   const archiveLock = (prevIsArchived && accessRole === 'admin') ? ' 🔒' : '';
-
-  /* Access badge */
   let roleBadge = '';
   if (accessRole === 'admin')  roleBadge = '<span class="role-badge admin-badge">Admin</span>';
   if (accessRole === 'viewer') roleBadge = '<span class="role-badge viewer-badge">Viewer</span>';
 
-  /* Hide prev button entirely for viewers when prev is a past month */
+  /* Hide prev button entirely for viewers past the archive boundary */
   const prevHidden = (viewerMode && prevIsArchived) ? 'style="display:none"' : '';
 
   var monthEl = accessRole === 'admin'
     ? '<button class="month-name-btn" onclick="showMonthPicker(\'' + tab + '\')" aria-label="Pick month">' + esc(monthName) + roleBadge + '<span class="picker-hint">&#9660;</span></button>'
     : '<span class="month-name">' + esc(monthName) + roleBadge + '</span>';
 
-  return '<div class="month-nav">' +
-    '<button class="nav-btn" onclick="navigateMonth(\'' + tab + '\',-1)" ' + prevOff + ' ' + prevHidden + ' aria-label="Previous month">&#8249;' + esc(archiveLock) + '</button>' +
-    monthEl +
-    '<button class="nav-btn" onclick="navigateMonth(\'' + tab + '\',1)" ' + nextOff + ' aria-label="Next month">&#8250;</button>' +
-    '</div>';
+  /* Publish toggle — admin only */
+  var publishRow = '';
+  if (accessRole === 'admin') {
+    const isPublished = (arr[idx]?.published !== false);
+    const toggleId    = 'ptog-' + tab + '-' + monthKey.replace(/-/g,'');
+    publishRow = '<div class="publish-bar">'
+      + '<span class="publish-bar-label">'
+      + (isPublished ? '&#128065; Visible to <strong>all users</strong>' : '&#128274; <strong>Hidden</strong> from viewers')
+      + '</span>'
+      + '<label class="toggle-switch" title="Toggle viewer visibility">'
+      + '<input type="checkbox" id="' + toggleId + '"'
+      + (isPublished ? ' checked' : '')
+      + ' onchange="togglePublish(\'' + tab + '\',\'' + monthKey + '\',this.checked)">'
+      + '<span class="toggle-slider"></span>'
+      + '</label>'
+      + '</div>';
+  }
+
+  return '<div class="month-nav">'
+    + '<button class="nav-btn" onclick="navigateMonth(\'' + tab + '\',-1)" ' + prevOff + ' ' + prevHidden + ' aria-label="Previous month">&#8249;' + esc(archiveLock) + '</button>'
+    + monthEl
+    + '<button class="nav-btn" onclick="navigateMonth(\'' + tab + '\',1)" ' + nextOff + ' aria-label="Next month">&#8250;</button>'
+    + '</div>'
+    + publishRow;
 }
 
 /** Return true when monthKey ("YYYY-MM") is strictly before the current calendar month */
@@ -526,15 +774,22 @@ window.submitPin = async function submitPin() {
     if (_ati >= 0) state.tuesdayIdx = _ati;
     const _aspi = state.specialData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
     if (_aspi >= 0) state.specialIdx = _aspi;
+    const _afi = state.fastingData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+    if (_afi >= 0) state.fastingIdx = _afi;
   } else if (hash === VIEWER_HASH) {
     accessRole = 'viewer';
-    /* Reset to first non-past (current) month on login */
-    const _si = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
-    if (_si >= 0) state.sundayIdx = _si;
-    const _ti = state.tuesdayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
-    if (_ti >= 0) state.tuesdayIdx = _ti;
-    const _spi = state.specialData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
-    if (_spi >= 0) state.specialIdx = _spi;
+    /* For viewer: default to first PUBLISHED non-past month */
+    function _firstVisible(arr) {
+      var i = arr.findIndex(function(m){ return !isPastMonth(m.monthKey) && m.published !== false; });
+      if (i >= 0) return i;
+      /* fallback: first published month at all */
+      i = arr.findIndex(function(m){ return m.published !== false; });
+      return i >= 0 ? i : 0;
+    }
+    state.sundayIdx  = _firstVisible(state.sundayData);
+    state.tuesdayIdx = _firstVisible(state.tuesdayData);
+    state.specialIdx = _firstVisible(state.specialData);
+    state.fastingIdx = _firstVisible(state.fastingData);
   } else {
     id('pin-error').textContent = 'Incorrect PIN. Please try again.';
     id('pin-input').value = '';
@@ -584,6 +839,9 @@ window.downloadSchedule = function downloadSchedule() {
   } else if (state.tab === 'tuesday') {
     data      = state.tuesdayData[state.tuesdayIdx];
     tabLabel  = 'Tuesday Prayer';
+  } else if (state.tab === 'fasting') {
+    data      = state.fastingData[state.fastingIdx];
+    tabLabel  = 'Fasting Prayer';
   } else {
     data      = state.specialData[state.specialIdx];
     tabLabel  = 'Special Days';
@@ -662,8 +920,22 @@ window.downloadSchedule = function downloadSchedule() {
           + '</div>';
       });
     }
+  } else if (state.tab === 'fasting') {
+    if (!data.sessions || data.sessions.length === 0) {
+      bodyHTML = '<p>No fasting prayer sessions this month.</p>';
+    } else {
+      var rows = data.sessions.map(function(s) {
+        return '<tr><td>' + htmlEsc(s.date) + '</td><td>' + htmlEsc(s.day)
+          + '</td><td>' + htmlEsc(s.worshipBy || '—')
+          + '</td><td>' + htmlEsc(s.sermonBy  || '—') + '</td></tr>';
+      }).join('');
+      bodyHTML = '<div class="service-block">'
+        + '<h3>&#9670; Fasting Prayer &mdash; ' + htmlEsc(data.month) + '</h3>'
+        + '<table><thead><tr><th>Date</th><th>Day</th><th>Worship By</th><th>Sermon By</th></tr></thead>'
+        + '<tbody>' + rows + '</tbody></table>'
+        + '</div>';
+    }
   } else {
-    /* Special days */
     if (!data.events || data.events.length === 0) {
       bodyHTML = '<p>No special events this month.</p>';
     } else {
@@ -752,12 +1024,8 @@ var _pickerTab = null;
 window.showMonthPicker = function showMonthPicker(tab) {
   if (accessRole !== 'admin') return;
   _pickerTab = tab;
-  var arr  = tab === 'sunday'  ? state.sundayData
-           : tab === 'tuesday' ? state.tuesdayData
-           :                     state.specialData;
-  var idxK = tab === 'sunday'  ? 'sundayIdx'
-           : tab === 'tuesday' ? 'tuesdayIdx'
-           :                     'specialIdx';
+  var arr    = getTabArr(tab);
+  var idxK   = getTabIdxKey(tab);
   var curIdx = state[idxK];
   var sel = id('picker-select');
   if (!sel) return;
@@ -769,9 +1037,7 @@ window.showMonthPicker = function showMonthPicker(tab) {
 
 window.jumpToMonth = function jumpToMonth() {
   var sel  = id('picker-select');
-  var idxK = _pickerTab === 'sunday'  ? 'sundayIdx'
-           : _pickerTab === 'tuesday' ? 'tuesdayIdx'
-           :                            'specialIdx';
+  var idxK = getTabIdxKey(_pickerTab);
   state[idxK] = parseInt(sel.value, 10);
   id('month-picker').classList.add('hidden');
   render();

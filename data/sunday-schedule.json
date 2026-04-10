@@ -8,70 +8,276 @@
         "time": "Sun 7:00 AM",
         "location": "Kachohally",
         "programs": [
-          { "role": "Incharge",       "weeks": ["Mohan",   "Anand",    "Raju",     "Raja",    "John"] },
-          { "role": "Praise Worship", "weeks": ["Mohan",   "Saravana", "Mohan",    "John",    "Anand"] },
-          { "role": "Choir",          "weeks": ["Darshan", "Saravana", "Deepa",    "Nalini",  "Saravana"] },
-          { "role": "Sermon By",      "weeks": ["Jude",    "MudiAlba", "John",     "Pradeep", "John"] },
-          { "role": "Translation",    "weeks": ["Darshan", "Anand",    "Anand",    "Rajesh",  "Anand"] }
+          {
+            "role": "Incharge",
+            "weeks": [
+              "Mohan",
+              "Anand",
+              "Raju",
+              "Raja",
+              "John"
+            ]
+          },
+          {
+            "role": "Praise Worship",
+            "weeks": [
+              "Mohan",
+              "Saravana",
+              "Mohan",
+              "John",
+              "Anand"
+            ]
+          },
+          {
+            "role": "Choir",
+            "weeks": [
+              "Darshan",
+              "Saravana",
+              "Deepa",
+              "Nalini",
+              "Saravana"
+            ]
+          },
+          {
+            "role": "Sermon By",
+            "weeks": [
+              "Jude",
+              "MudiAlba",
+              "John",
+              "Pradeep",
+              "John"
+            ]
+          },
+          {
+            "role": "Translation",
+            "weeks": [
+              "Darshan",
+              "Anand",
+              "Anand",
+              "Rajesh",
+              "Anand"
+            ]
+          }
         ]
       },
       {
         "time": "Sun 9:30 AM",
         "location": "Kachohally",
         "programs": [
-          { "role": "Incharge",       "weeks": ["John",    "Anand",     "Raju",      "Raja",      "John"] },
-          { "role": "Praise Worship", "weeks": ["Girish",  "Darshan",   "Nalini",    "Deepa",     "Nalini"] },
-          { "role": "Choir",          "weeks": ["Girish",  "Darshan",   "Nalini",    "Deepa",     "Nalini"] },
-          { "role": "Sermon By",      "weeks": ["Jude",    "Mudi Alba", "Mudi Alba", "Mudi Alba", "Mudi Alba"] },
-          { "role": "Translation",    "weeks": ["Darshan", "Nalina",    "Nalina",    "Nalina",    "Nalina"] }
+          {
+            "role": "Incharge",
+            "weeks": [
+              "John",
+              "Anand",
+              "Raju",
+              "Raja",
+              "John"
+            ]
+          },
+          {
+            "role": "Praise Worship",
+            "weeks": [
+              "Girish",
+              "Darshan",
+              "Nalini",
+              "Deepa",
+              "Nalini"
+            ]
+          },
+          {
+            "role": "Choir",
+            "weeks": [
+              "Girish",
+              "Darshan",
+              "Nalini",
+              "Deepa",
+              "Nalini"
+            ]
+          },
+          {
+            "role": "Sermon By",
+            "weeks": [
+              "Jude",
+              "Mudi Alba",
+              "Mudi Alba",
+              "Mudi Alba",
+              "Mudi Alba"
+            ]
+          },
+          {
+            "role": "Translation",
+            "weeks": [
+              "Darshan",
+              "Nalina",
+              "Nalina",
+              "Nalina",
+              "Nalina"
+            ]
+          }
         ]
       },
       {
         "time": "Sun 9:30 AM",
         "location": "Girigowdana",
         "programs": [
-          { "role": "Incharge",  "weeks": ["Mohan", "Mohan",   "Mohan",   "Mohan", "Mohan"] },
-          { "role": "Sermon By", "weeks": ["Mohan", "John",    "Pradeep", "Mohan",  "John"] }
+          {
+            "role": "Incharge",
+            "weeks": [
+              "Mohan",
+              "Mohan",
+              "Mohan",
+              "Mohan",
+              "Mohan"
+            ]
+          },
+          {
+            "role": "Sermon By",
+            "weeks": [
+              "Mohan",
+              "John",
+              "Pradeep",
+              "Mohan",
+              "John"
+            ]
+          }
         ]
       }
-    ]
+    ],
+    "published": true
   },
   {
     "month": "April 2026",
     "monthKey": "2026-04",
-    "notes": "Easter Sunday – Apr 5 (service at 10 AM). Good Friday service Apr 3 at 7 AM.",
+    "notes": "Easter Sunday \u2013 Apr 5 (service at 10 AM). Good Friday service Apr 3 at 7 AM.",
     "services": [
       {
         "time": "Sun 7:00 AM",
         "location": "Kachohally",
         "programs": [
-          { "role": "Incharge",       "weeks": ["Mohan",   "Anand",    "Raju",   "Raja"] },
-          { "role": "Praise Worship", "weeks": ["Mohan",   "Saravana", "Mohan",  "John"] },
-          { "role": "Choir",          "weeks": ["Mohan",   "Saravana", "Deepa",  "Nalini"] },
-          { "role": "Sermon By",      "weeks": ["Jude",    "MudiAlba", "John",   "Pradeep"] },
-          { "role": "Translation",    "weeks": ["Darshan", "Anand",    "Anand",  "Rajesh"] }
+          {
+            "role": "Incharge",
+            "weeks": [
+              "Mohan",
+              "Anand",
+              "Raju",
+              "Raja"
+            ]
+          },
+          {
+            "role": "Praise Worship",
+            "weeks": [
+              "Mohan",
+              "Saravana",
+              "Mohan",
+              "John"
+            ]
+          },
+          {
+            "role": "Choir",
+            "weeks": [
+              "Mohan",
+              "Saravana",
+              "Deepa",
+              "Nalini"
+            ]
+          },
+          {
+            "role": "Sermon By",
+            "weeks": [
+              "Jude",
+              "MudiAlba",
+              "John",
+              "Pradeep"
+            ]
+          },
+          {
+            "role": "Translation",
+            "weeks": [
+              "Darshan",
+              "Anand",
+              "Anand",
+              "Rajesh"
+            ]
+          }
         ]
       },
       {
         "time": "Sun 9:30 AM",
         "location": "Kachohally",
         "programs": [
-          { "role": "Incharge",       "weeks": ["Easter Service", "Anand",    "Raju",    "Raja"] },
-          { "role": "Praise Worship", "weeks": ["Easter Service", "Darshan",  "Nalini",  "Deepa"] },
-          { "role": "Choir",          "weeks": ["Easter Service", "Darshan",  "Nalini",  "Deepa"] },
-          { "role": "Sermon By",      "weeks": ["Easter Service", "MudiAlba", "MudiAlba","MudiAlba"] },
-          { "role": "Translation",    "weeks": ["Easter Service", "Nalina",   "Nalina",  "Nalina"] }
+          {
+            "role": "Incharge",
+            "weeks": [
+              "Easter Service",
+              "Anand",
+              "Raju",
+              "Raja"
+            ]
+          },
+          {
+            "role": "Praise Worship",
+            "weeks": [
+              "Easter Service",
+              "Darshan",
+              "Nalini",
+              "Deepa"
+            ]
+          },
+          {
+            "role": "Choir",
+            "weeks": [
+              "Easter Service",
+              "Darshan",
+              "Nalini",
+              "Deepa"
+            ]
+          },
+          {
+            "role": "Sermon By",
+            "weeks": [
+              "Easter Service",
+              "MudiAlba",
+              "MudiAlba",
+              "MudiAlba"
+            ]
+          },
+          {
+            "role": "Translation",
+            "weeks": [
+              "Easter Service",
+              "Nalina",
+              "Nalina",
+              "Nalina"
+            ]
+          }
         ]
       },
       {
         "time": "Sun 9:30 AM",
         "location": "Girigowdana",
         "programs": [
-          { "role": "Incharge",  "weeks": ["Easter Service", "Mohan", "Mohan",   "Mohan"] },
-          { "role": "Sermon By",   "weeks": ["Easter Service", "John",  "Pradeep", "Mohan"] }
+          {
+            "role": "Incharge",
+            "weeks": [
+              "Easter Service",
+              "Mohan",
+              "Mohan",
+              "Mohan"
+            ]
+          },
+          {
+            "role": "Sermon By",
+            "weeks": [
+              "Easter Service",
+              "John",
+              "Pradeep",
+              "Mohan"
+            ]
+          }
         ]
       }
-    ]
+    ],
+    "published": true
   },
   {
     "month": "May 2026",
@@ -82,32 +288,141 @@
         "time": "Sun 7:00 AM",
         "location": "Kachohally",
         "programs": [
-          { "role": "Incharge",       "weeks": ["", "", "", "", ""] },
-          { "role": "Choir",          "weeks": ["", "", "", "", ""] },
-          { "role": "Praise Worship", "weeks": ["", "", "", "", ""] },
-          { "role": "Sermon By",      "weeks": ["", "", "", "", ""] },
-          { "role": "Translation",    "weeks": ["", "", "", "", ""] }
+          {
+            "role": "Incharge",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          {
+            "role": "Choir",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          {
+            "role": "Praise Worship",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          {
+            "role": "Sermon By",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          {
+            "role": "Translation",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          }
         ]
       },
       {
         "time": "Sun 9:30 AM",
         "location": "Kachohally",
         "programs": [
-          { "role": "Incharge",       "weeks": ["", "", "", "", ""] },
-          { "role": "Praise Worship", "weeks": ["", "", "", "", ""] },
-          { "role": "Choir",          "weeks": ["", "", "", "", ""] },
-          { "role": "Sermon By",      "weeks": ["", "", "", "", ""] },
-          { "role": "Translation",    "weeks": ["", "", "", "", ""] }
+          {
+            "role": "Incharge",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          {
+            "role": "Praise Worship",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          {
+            "role": "Choir",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          {
+            "role": "Sermon By",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          {
+            "role": "Translation",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          }
         ]
       },
       {
         "time": "Sun 9:30 AM",
         "location": "Girigowdana",
         "programs": [
-          { "role": "Incharge",  "weeks": ["", "", "", "", ""] },
-          { "role": "Sermon By", "weeks": ["", "", "", "", ""] }
+          {
+            "role": "Incharge",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          {
+            "role": "Sermon By",
+            "weeks": [
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          }
         ]
       }
-    ]
+    ],
+    "published": false
   }
 ]
