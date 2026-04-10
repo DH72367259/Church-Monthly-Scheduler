@@ -34,6 +34,13 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
   registerSW();
+
+  /* Re-fetch data silently whenever the user brings the app to the foreground */
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && accessRole) {
+      refreshData();
+    }
+  });
 });
 
 function registerSW() {
@@ -100,6 +107,33 @@ async function loadData() {
         <button class="btn-primary" onclick="location.reload()">Retry</button>
       </div>`;
   }
+}
+
+/** Silently re-fetch JSON data in the background and re-render if anything changed */
+async function refreshData() {
+  try {
+    const ts = '?t=' + Date.now();
+    const [sr, tr, xr] = await Promise.all([
+      fetch('./data/sunday-schedule.json' + ts),
+      fetch('./data/tuesday-prayer.json'  + ts),
+      fetch('./data/special-days.json'    + ts)
+    ]);
+    if (!sr.ok || !tr.ok) return; /* silently skip on network error */
+    const newSunday  = await sr.json();
+    const newTuesday = await tr.json();
+    const newSpecial = xr.ok ? await xr.json() : state.specialData;
+
+    /* Only re-render if data actually changed */
+    if (JSON.stringify(newSunday)  !== JSON.stringify(state.sundayData)  ||
+        JSON.stringify(newTuesday) !== JSON.stringify(state.tuesdayData) ||
+        JSON.stringify(newSpecial) !== JSON.stringify(state.specialData)) {
+      state.sundayData  = newSunday;
+      state.tuesdayData = newTuesday;
+      state.specialData = newSpecial;
+      refreshSpecialTabState();
+      render();
+    }
+  } catch (e) { /* silent — don't disrupt the user */ }
 }
 
 /**
