@@ -2,10 +2,9 @@
 'use strict';
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   FIREBASE OTP AUTHENTICATION
-   Users log in with their phone number and verify via OTP.
-   Access roles determined by authorized phone numbers in firebase-config.js
-   ══════════════════════════════════════════════════════════════════════════ */
+  PIN AUTHENTICATION
+  Users log in with phone number + PIN.
+  ══════════════════════════════════════════════════════════════════════════ */
 
 const authUtils = window.authUtils || {};
 const DEFAULT_COUNTRY_CODE = (window.authDefaults && window.authDefaults.defaultCountryCode) || '91';
@@ -75,14 +74,9 @@ function safeEqual(left, right) {
   return authUtils.safeEqual ? authUtils.safeEqual(left, right) : String(left || '') === String(right || '');
 }
 
-/* ── Firebase OTP state ───────────────────────────────────────────────────── */
-let confirmationResult = null;  /* Firebase ConfirmationResult from sendSignInCode */
-let currentPhoneNumber = null;  /* Phone number being verified */
+/* ── Login state ───────────────────────────────────────────────────────────── */
 let authenticatedPhoneNumber = null;
-let currentFirebasePhone = null;
 let currentUserProfile = null;
-let authMode = 'otp';
-let authStateResolved = false;
 let _visibilityUnsub = null;
 let _adminUsersUnsub = null;
 let _adminUsersCache = [];
@@ -90,6 +84,8 @@ let _adminUsersCache = [];
 /* ── Firestore collections ──────────────────────────────────────────────── */
 const FS_USERS_COLLECTION      = 'authorizedUsers';
 const FS_VISIBILITY_COLLECTION = 'monthVisibility';
+const LOCAL_USERS_KEY          = 'pf_users_local';
+const LOCAL_VISIBILITY_KEY     = 'pf_visibility_local';
 
 /* ── Admin one-session lock (browser-level) ─────────────────────────────── */
 const ADMIN_LOCK_KEY        = 'pf_admin_lock';
@@ -124,7 +120,6 @@ const state = {
 
 /* ── Bootstrap ────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
-  initFirebaseAuthState();
   syncAdminControls();
   loadData();
   registerSW();
@@ -145,6 +140,38 @@ function getDb() {
   return window.db || null;
 }
 
+function getLocalUsersMap() {
+  try {
+    var raw = localStorage.getItem(LOCAL_USERS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function setLocalUsersMap(map) {
+  localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(map || {}));
+}
+
+function upsertLocalUser(phone, data) {
+  var map = getLocalUsersMap();
+  map[phone] = Object.assign({}, map[phone] || {}, data || {}, { phone: phone });
+  setLocalUsersMap(map);
+}
+
+function getLocalVisibilityMap() {
+  try {
+    var raw = localStorage.getItem(LOCAL_VISIBILITY_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function setLocalVisibilityMap(map) {
+  localStorage.setItem(LOCAL_VISIBILITY_KEY, JSON.stringify(map || {}));
+}
+
 function monthDocId(tab, monthKey) {
   return tab + '__' + monthKey;
 }
@@ -159,8 +186,8 @@ function getBootstrapUser(phoneNumber) {
     username: sanitizeUsername(user.username, user.role === 'admin' ? 'Admin' : 'User'),
     role: user.role || 'viewer',
     active: user.active !== false,
+    pinPlain: user.pinPlain || null,
     pinHash: user.pinHash || null,
-    phoneVerifiedAt: user.phoneVerified === false ? null : 'bootstrap',
     bootstrap: true
   };
 }
@@ -184,45 +211,28 @@ async function getUserProfile(phoneNumber) {
     }
   }
 
+  var local = getLocalUsersMap()[normalized];
+  if (local) {
+    merged = Object.assign({}, merged || {}, local, { phone: normalized });
+  }
+
   return merged;
-}
-
-async function updateOwnProfileAfterOtp(profile) {
-  var db = getDb();
-  if (!db || !profile) return profile;
-  var payload = {
-    phone: profile.phone,
-    username: sanitizeUsername(profile.username, profile.role === 'admin' ? 'Admin' : 'User'),
-    role: profile.role,
-    active: profile.active !== false,
-    lastLoginMethod: 'otp',
-    lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  };
-
-  if (!profile.phoneVerifiedAt) {
-    payload.phoneVerifiedAt = firebase.firestore.FieldValue.serverTimestamp();
-  }
-  if (profile.pinHash) {
-    payload.pinHash = profile.pinHash;
-    payload.pinVersion = 1;
-  }
-
-  try {
-    await db.collection(FS_USERS_COLLECTION).doc(profile.phone).set(payload, { merge: true });
-    return Object.assign({}, profile, payload, {
-      phoneVerifiedAt: profile.phoneVerifiedAt || new Date().toISOString(),
-      lastLoginMethod: 'otp'
-    });
-  } catch (err) {
-    console.warn('Own profile sync failed:', err.message);
-    return profile;
-  }
 }
 
 async function markPinLogin(profile) {
   var db = getDb();
-  if (!db || !profile) return;
+  if (!profile) return;
+  upsertLocalUser(profile.phone, {
+    phone: profile.phone,
+    username: sanitizeUsername(profile.username, profile.role === 'admin' ? 'Admin' : 'User'),
+    role: profile.role,
+    active: profile.active !== false,
+    pinPlain: profile.pinPlain || null,
+    pinHash: profile.pinHash || null,
+    lastLoginMethod: 'pin',
+    lastLoginAt: Date.now()
+  });
+  if (!db) return;
   try {
     await db.collection(FS_USERS_COLLECTION).doc(profile.phone).set({
       lastLoginMethod: 'pin',
@@ -269,23 +279,6 @@ function pinBlockedMessage(phoneNumber) {
   return '';
 }
 
-function initFirebaseAuthState() {
-  if (!window.firebase || !firebase.auth || !window.firebaseReady || !firebase.apps || !firebase.apps.length) {
-    authStateResolved = true;
-    currentFirebasePhone = null;
-    syncAuthModeUI();
-    return;
-  }
-  firebase.auth().onAuthStateChanged(function(user) {
-    currentFirebasePhone = user && user.phoneNumber ? normalizePhoneNumber(user.phoneNumber) : null;
-    authStateResolved = true;
-    if (!currentFirebasePhone) {
-      currentUserProfile = null;
-    }
-    syncAuthModeUI();
-  });
-}
-
 function markBasePublished(arr) {
   arr.forEach(function(m) {
     if (typeof m.basePublished === 'undefined') m.basePublished = (m.published !== false);
@@ -311,7 +304,11 @@ function stopFirestoreSubscriptions() {
 
 function subscribeVisibilityOverrides() {
   var db = getDb();
-  if (!db) return;
+  if (!db) {
+    applyVisibilityOverrides(getLocalVisibilityMap());
+    refreshAllTabStates();
+    return;
+  }
   if (_visibilityUnsub) _visibilityUnsub();
   _visibilityUnsub = db.collection(FS_VISIBILITY_COLLECTION).onSnapshot(function(snapshot) {
     var overrides = {};
@@ -323,6 +320,9 @@ function subscribeVisibilityOverrides() {
     if (accessRole) render();
   }, function(err) {
     console.warn('Visibility subscription error:', err.message);
+    applyVisibilityOverrides(getLocalVisibilityMap());
+    refreshAllTabStates();
+    if (accessRole) render();
   });
 }
 
@@ -342,14 +342,13 @@ function renderAdminUsersList(users) {
 
   host.innerHTML = users.map(function(user) {
     var roleClass = user.role === 'admin' ? 'admin-badge' : 'viewer-badge';
-    var verified = user.phoneVerifiedAt ? 'Phone verified' : 'Awaiting first OTP';
-    var pinStatus = user.pinHash ? 'PIN ready' : 'OTP only';
+    var pinStatus = user.pinPlain ? ('PIN: ' + user.pinPlain) : (user.pinHash ? 'PIN is set' : 'No PIN');
     return '<div class="admin-user-row">'
       + '<div class="admin-user-meta">'
       + '<div class="admin-user-name">' + esc(user.username || 'User') + '</div>'
       + '<div class="admin-user-phone">' + esc(user.phone) + '</div>'
       + '<div><span class="role-badge ' + roleClass + '">' + esc(user.role) + '</span></div>'
-      + '<div class="admin-user-status">' + esc(pinStatus + ' · ' + verified) + '</div>'
+      + '<div class="admin-user-status">' + esc(pinStatus) + '</div>'
       + '</div>'
       + '<div class="admin-user-actions">'
       + '<button class="mini-btn" onclick="prefillAuthorizedUser(\'' + esc(user.phone).replace(/&#039;/g, "\\'") + '\',\'' + user.role + '\',\'' + esc(user.username || 'User').replace(/&#039;/g, "\\'") + '\')">Edit</button>'
@@ -361,7 +360,30 @@ function renderAdminUsersList(users) {
 
 function subscribeAdminUsers() {
   var db = getDb();
-  if (!db || accessRole !== 'admin') return;
+  if (accessRole !== 'admin') return;
+  if (!db) {
+    var users = [];
+    var map = getLocalUsersMap();
+    Object.keys(map).forEach(function(phone) {
+      var data = map[phone] || {};
+      if (data.active === false) return;
+      users.push({
+        phone: phone,
+        role: data.role || 'viewer',
+        username: sanitizeUsername(data.username, data.role === 'admin' ? 'Admin' : 'User'),
+        pinPlain: data.pinPlain || null,
+        pinHash: data.pinHash || null,
+        active: data.active !== false
+      });
+    });
+    users.sort(function(a, b) {
+      if (a.role !== b.role) return a.role === 'admin' ? -1 : 1;
+      return a.phone.localeCompare(b.phone);
+    });
+    _adminUsersCache = users;
+    renderAdminUsersList(users);
+    return;
+  }
   if (_adminUsersUnsub) _adminUsersUnsub();
   _adminUsersUnsub = db.collection(FS_USERS_COLLECTION).onSnapshot(function(snapshot) {
     var users = [];
@@ -372,8 +394,8 @@ function subscribeAdminUsers() {
         phone: doc.id,
         role: data.role || 'viewer',
         username: sanitizeUsername(data.username, data.role === 'admin' ? 'Admin' : 'User'),
+        pinPlain: data.pinPlain || null,
         pinHash: data.pinHash || null,
-        phoneVerifiedAt: data.phoneVerifiedAt || null,
         active: data.active !== false
       });
     });
@@ -385,6 +407,26 @@ function subscribeAdminUsers() {
     renderAdminUsersList(users);
   }, function(err) {
     console.warn('Admin users subscription error:', err.message);
+    var users = [];
+    var map = getLocalUsersMap();
+    Object.keys(map).forEach(function(phone) {
+      var data = map[phone] || {};
+      if (data.active === false) return;
+      users.push({
+        phone: phone,
+        role: data.role || 'viewer',
+        username: sanitizeUsername(data.username, data.role === 'admin' ? 'Admin' : 'User'),
+        pinPlain: data.pinPlain || null,
+        pinHash: data.pinHash || null,
+        active: data.active !== false
+      });
+    });
+    users.sort(function(a, b) {
+      if (a.role !== b.role) return a.role === 'admin' ? -1 : 1;
+      return a.phone.localeCompare(b.phone);
+    });
+    _adminUsersCache = users;
+    renderAdminUsersList(users);
   });
 }
 
@@ -491,10 +533,6 @@ window.saveAuthorizedUser = async function saveAuthorizedUser() {
   var errEl = id('admin-user-error');
   errEl.textContent = '';
 
-  if (!db) {
-    errEl.textContent = 'Firestore is not configured yet.';
-    return;
-  }
   if (!phone) {
     errEl.textContent = 'Enter a valid phone number.';
     return;
@@ -516,7 +554,7 @@ window.saveAuthorizedUser = async function saveAuthorizedUser() {
     return;
   }
 
-  if (!pin && !(existing && existing.pinHash)) {
+  if (!pin && !(existing && (existing.pinHash || existing.pinPlain))) {
     errEl.textContent = 'Set a 4 to 6 digit PIN for this user.';
     return;
   }
@@ -530,26 +568,31 @@ window.saveAuthorizedUser = async function saveAuthorizedUser() {
     username: sanitizeUsername(username, role === 'admin' ? 'Admin' : 'User'),
     role: role,
     active: true,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt: db ? firebase.firestore.FieldValue.serverTimestamp() : Date.now(),
     updatedBy: authenticatedPhoneNumber || null
   };
 
   if (!existing || !existing.createdAt) {
-    payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    payload.createdAt = db ? firebase.firestore.FieldValue.serverTimestamp() : Date.now();
     payload.createdBy = authenticatedPhoneNumber || null;
   }
   if (pin) {
+    payload.pinPlain = pin;
     payload.pinHash = await hashPin(phone, pin);
     payload.pinVersion = 1;
-    payload.pinUpdatedAt = firebase.firestore.FieldValue.serverTimestamp();
+    payload.pinUpdatedAt = db ? firebase.firestore.FieldValue.serverTimestamp() : Date.now();
   }
 
   try {
-    await db.collection(FS_USERS_COLLECTION).doc(phone).set(payload, { merge: true });
+    upsertLocalUser(phone, payload);
+    if (db) {
+      await db.collection(FS_USERS_COLLECTION).doc(phone).set(payload, { merge: true });
+    }
     id('admin-user-name').value = '';
     id('admin-user-phone').value = '';
     id('admin-user-role').value = 'viewer';
     id('admin-user-pin').value = '';
+    subscribeAdminUsers();
   } catch (err) {
     console.warn('Save user error:', err.message);
     errEl.textContent = 'Could not save user. Check Firestore rules.';
@@ -561,22 +604,27 @@ window.removeAuthorizedUser = async function removeAuthorizedUser(phone) {
   var db = getDb();
   var errEl = id('admin-user-error');
   errEl.textContent = '';
-  if (!db) {
-    errEl.textContent = 'Firestore is not configured yet.';
-    return;
-  }
   if (phone === authenticatedPhoneNumber) {
     errEl.textContent = 'You cannot remove your own active admin account from this session.';
     return;
   }
 
   try {
-    await db.collection(FS_USERS_COLLECTION).doc(phone).set({
+    upsertLocalUser(phone, {
       phone: phone,
       active: false,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedBy: authenticatedPhoneNumber || null
-    }, { merge: true });
+      updatedBy: authenticatedPhoneNumber || null,
+      updatedAt: Date.now()
+    });
+    if (db) {
+      await db.collection(FS_USERS_COLLECTION).doc(phone).set({
+        phone: phone,
+        active: false,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: authenticatedPhoneNumber || null
+      }, { merge: true });
+    }
+    subscribeAdminUsers();
   } catch (err) {
     console.warn('Remove user error:', err.message);
     errEl.textContent = 'Could not remove user. Check Firestore rules.';
@@ -666,7 +714,7 @@ async function loadData() {
     /* Enable/disable tabs based on current visibility/data */
     refreshAllTabStates();
 
-    /* Gate entire app behind OTP — no data visible without authentication */
+    /* Gate entire app behind login — no data visible without authentication */
     showOtpModal(() => render());
   } catch (err) {
     content.innerHTML = `
@@ -1156,17 +1204,23 @@ function renderFasting() {
 window.togglePublish = async function togglePublish(tab, monthKey, newValue) {
   if (accessRole !== 'admin') return;
   var db = getDb();
-  if (!db) {
-    alert('Firestore is not configured yet. Finish Firebase setup first.');
-    return;
-  }
-
   /* Update local state immediately so UI reflects the change at once */
   const localArr = getTabArr(tab);
   const localMonth = localArr.find(m => m.monthKey === monthKey);
   if (localMonth) localMonth.published = newValue;
+  var localVisibility = getLocalVisibilityMap();
+  localVisibility[monthDocId(tab, monthKey)] = {
+    tab: tab,
+    monthKey: monthKey,
+    published: !!newValue,
+    updatedBy: authenticatedPhoneNumber || null,
+    updatedAt: Date.now()
+  };
+  setLocalVisibilityMap(localVisibility);
   refreshAllTabStates();
   render();
+
+  if (!db) return;
 
   try {
     await db.collection(FS_VISIBILITY_COLLECTION).doc(monthDocId(tab, monthKey)).set({
@@ -1257,101 +1311,49 @@ function archiveBanner() {
 }
 
 /* ════════════════════════════════════════════════════════════════════════════════
-   FIREBASE OTP MODAL & AUTHENTICATION
+   PIN LOGIN MODAL & AUTHENTICATION
    ════════════════════════════════════════════════════════════════════════════════ */
 let _authCallback = null;
 
-/** Show the OTP modal; onSuccess() called once user is authenticated */
+/** Show the login modal; onSuccess() called once user is authenticated */
 function showOtpModal(onSuccess) {
   _authCallback = onSuccess;
   id('otp-modal').classList.remove('hidden');
-  setAuthMode(currentFirebasePhone ? 'pin' : 'otp');
+  showPinLoginStep();
 }
 
-/**  Show phone entry step */
-function showPhoneEntry() {
-  id('phone-entry-step').classList.remove('hidden');
-  id('otp-verify-step').classList.add('hidden');
-  id('pin-login-step').classList.add('hidden');
-  id('phone-input').value = '';
-  id('phone-error').textContent = '';
-  setTimeout(() => id('phone-input').focus(), 80);
-}
-
-/** Show OTP verification step */
-function showOtpEntry() {
-  id('phone-entry-step').classList.add('hidden');
-  id('otp-verify-step').classList.remove('hidden');
-  id('pin-login-step').classList.add('hidden');
-  id('otp-input').value = '';
-  id('otp-error').textContent = '';
-  setTimeout(() => id('otp-input').focus(), 80);
-}
-
-function showPinEntry() {
-  var phoneInput = id('pin-phone-input');
-  var helper = id('pin-device-note');
-  var submitBtn = id('pin-submit-btn');
-
-  id('phone-entry-step').classList.add('hidden');
-  id('otp-verify-step').classList.add('hidden');
+function showPinLoginStep() {
+  id('pin-create-step').classList.add('hidden');
   id('pin-login-step').classList.remove('hidden');
   id('pin-error').textContent = '';
   id('pin-input').value = '';
-
-  if (currentFirebasePhone) {
-    phoneInput.value = currentFirebasePhone;
-    phoneInput.readOnly = true;
-    helper.textContent = 'Registered phone detected on this browser. Enter the PIN to unlock.';
-    submitBtn.disabled = false;
-  } else {
-    phoneInput.value = '';
-    phoneInput.readOnly = false;
-    helper.textContent = authStateResolved
-      ? 'PIN login is available only after OTP registration on this browser. Use OTP on a new device.'
-      : 'Checking registered phone session…';
-    submitBtn.disabled = true;
-  }
-
-  setTimeout(function() {
-    id('pin-input').focus();
-  }, 80);
+  setTimeout(function() { id('pin-phone-input').focus(); }, 80);
 }
 
-window.setAuthMode = function setAuthMode(mode) {
-  authMode = mode === 'pin' ? 'pin' : 'otp';
-  syncAuthModeUI();
+function showPinCreateStep() {
+  id('pin-login-step').classList.add('hidden');
+  id('pin-create-step').classList.remove('hidden');
+  id('pin-create-error').textContent = '';
+  id('new-pin-input').value = '';
+  id('confirm-new-pin-input').value = '';
+  setTimeout(function() { id('new-pin-input').focus(); }, 80);
+}
+
+window.showCreatePin = function showCreatePin() {
+  id('pin-create-phone-input').value = id('pin-phone-input').value.trim();
+  showPinCreateStep();
 };
 
-function syncAuthModeUI() {
-  var otpTab = id('auth-tab-otp');
-  var pinTab = id('auth-tab-pin');
-  var modal = id('otp-modal');
-  var note = id('auth-device-note');
-  if (!otpTab || !pinTab || !note) return;
-
-  otpTab.classList.toggle('active', authMode === 'otp');
-  pinTab.classList.toggle('active', authMode === 'pin');
-  otpTab.setAttribute('aria-selected', authMode === 'otp' ? 'true' : 'false');
-  pinTab.setAttribute('aria-selected', authMode === 'pin' ? 'true' : 'false');
-  pinTab.disabled = false;
-
-  note.textContent = currentFirebasePhone
-    ? 'This browser already has a registered phone session. You can unlock with PIN or switch to OTP for another number.'
-    : 'Use OTP the first time on each browser. PIN unlock works after the phone session is registered on that browser.';
-
-  if (modal && modal.classList.contains('hidden')) return;
-  if (authMode === 'pin') showPinEntry();
-  else if (id('otp-verify-step') && !id('otp-verify-step').classList.contains('hidden') && confirmationResult) showOtpEntry();
-  else showPhoneEntry();
-}
+window.backToPinLogin = function backToPinLogin() {
+  showPinLoginStep();
+};
 
 function showLockedState() {
   id('content').innerHTML = `
     <div style="text-align:center;padding:60px 24px;">
       <div style="font-size:48px;margin-bottom:16px;">🔐</div>
       <p style="font-size:16px;font-weight:600;color:#374151;margin-bottom:8px;">Schedule is locked</p>
-      <p style="font-size:13px;color:#6b7280;margin-bottom:24px;">Use OTP or PIN to unlock the app.</p>
+      <p style="font-size:13px;color:#6b7280;margin-bottom:24px;">Use phone number and PIN to unlock the app.</p>
       <button class="otp-submit" style="max-width:220px;margin:0 auto;" onclick="showOtpModal(() => render())">Sign In</button>
     </div>`;
 }
@@ -1396,106 +1398,22 @@ async function finalizeAuth(profile, method) {
     subscribeVisibilityOverrides();
   }
 
-  if (method === 'pin') {
-    clearPinAttemptState(profile.phone);
-    await markPinLogin(profile);
-  }
+  clearPinAttemptState(profile.phone);
+  await markPinLogin(profile);
 
   syncAdminControls();
-  confirmationResult = null;
-  currentPhoneNumber = null;
   id('otp-modal').classList.add('hidden');
   if (_authCallback) { _authCallback(); _authCallback = null; }
 }
 
-/** Send OTP to entered phone number */
-window.sendOtp = async function sendOtp() {
-  const phoneNumber = normalizePhoneNumber(id('phone-input').value.trim());
-  
-  if (!phoneNumber) {
-    id('phone-error').textContent = 'Enter a valid phone number.';
-    return;
-  }
-
-  if (!window.firebaseReady || !window.firebase || !window.recaptchaVerifier) {
-    id('phone-error').textContent = 'Firebase OTP is not configured yet. Ask admin to complete setup.';
-    return;
-  }
-
-  try {
-    const appVerifier = window.recaptchaVerifier;
-    /* Send OTP via Firebase */
-    confirmationResult = await firebase.auth().signInWithPhoneNumber(phoneNumber, appVerifier);
-    currentPhoneNumber = phoneNumber;
-    id('phone-input').value = phoneNumber;
-    id('phone-error').textContent = '';
-    showOtpEntry();
-  } catch (error) {
-    console.error('OTP Send Error:', error);
-    id('phone-error').textContent = error.message || 'Failed to send OTP. Try again.';
-  }
-};
-
-/** Verify OTP code */
-window.verifyOtp = async function verifyOtp() {
-  const otpCode = id('otp-input').value.trim();
-  
-  if (!otpCode || otpCode.length !== 6) {
-    id('otp-error').textContent = 'Please enter a valid 6-digit code.';
-    return;
-  }
-
-  if (!confirmationResult) {
-    id('otp-error').textContent = 'Session expired. Please start over.';
-    showPhoneEntry();
-    return;
-  }
-
-  try {
-    /* Verify OTP with Firebase */
-    await confirmationResult.confirm(otpCode);
-
-    /* Determine access role based on Firestore-backed user registry */
-    var profile = await getUserProfile(currentPhoneNumber);
-
-    if (!profile || profile.active === false || !(profile.role === 'admin' || profile.role === 'viewer')) {
-      await firebase.auth().signOut().catch(function() {});
-      authenticatedPhoneNumber = null;
-      currentFirebasePhone = null;
-      id('otp-error').textContent = 'This phone number is not authorized. Contact your administrator.';
-      id('otp-input').value = '';
-      id('otp-input').focus();
-      return;
-    }
-
-    currentFirebasePhone = currentPhoneNumber;
-    profile = await updateOwnProfileAfterOtp(profile);
-    await finalizeAuth(profile, 'otp');
-  } catch (error) {
-    console.error('OTP Verification Error:', error);
-    id('otp-error').textContent = error.message || 'Invalid OTP. Please try again.';
-    id('otp-input').value = '';
-    id('otp-input').focus();
-  }
-};
-
 window.loginWithPin = async function loginWithPin() {
-  var phoneInput = id('pin-phone-input').value.trim();
-  var phoneNumber = normalizePhoneNumber(phoneInput);
+  var phoneNumber = normalizePhoneNumber(id('pin-phone-input').value.trim());
   var pin = id('pin-input').value.trim();
   var errorEl = id('pin-error');
   errorEl.textContent = '';
 
-  if (!currentFirebasePhone) {
-    errorEl.textContent = 'Use OTP once on this browser before PIN login is available.';
-    return;
-  }
   if (!phoneNumber) {
-    errorEl.textContent = 'Enter the registered phone number.';
-    return;
-  }
-  if (phoneNumber !== currentFirebasePhone) {
-    errorEl.textContent = 'This browser is registered for ' + currentFirebasePhone + '. Use OTP to switch accounts.';
+    errorEl.textContent = 'Enter a valid phone number.';
     return;
   }
   if (!isValidPin(pin)) {
@@ -1515,13 +1433,19 @@ window.loginWithPin = async function loginWithPin() {
       errorEl.textContent = 'This phone number is not authorized.';
       return;
     }
-    if (!profile.pinHash) {
+    if (!profile.pinHash && !profile.pinPlain) {
       errorEl.textContent = 'PIN login is not enabled yet for this user. Ask an admin to set a PIN.';
       return;
     }
 
-    var candidateHash = await hashPin(phoneNumber, pin);
-    if (!safeEqual(candidateHash, profile.pinHash)) {
+    var pinMatched = false;
+    if (profile.pinPlain && safeEqual(pin, profile.pinPlain)) {
+      pinMatched = true;
+    } else if (profile.pinHash) {
+      var candidateHash = await hashPin(phoneNumber, pin);
+      pinMatched = safeEqual(candidateHash, profile.pinHash);
+    }
+    if (!pinMatched) {
       var attemptState = recordFailedPinAttempt(phoneNumber);
       errorEl.textContent = attemptState.blockedUntil > Date.now()
         ? pinBlockedMessage(phoneNumber)
@@ -1538,32 +1462,70 @@ window.loginWithPin = async function loginWithPin() {
   }
 };
 
-window.useOtpForDifferentPhone = async function useOtpForDifferentPhone() {
-  if (window.firebase && firebase.auth && firebase.auth().currentUser) {
-    try {
-      await firebase.auth().signOut();
-    } catch (err) {
-      console.warn('Could not sign out current Firebase session:', err.message);
-    }
-  }
-  currentFirebasePhone = null;
-  currentUserProfile = null;
-  confirmationResult = null;
-  currentPhoneNumber = null;
-  authMode = 'otp';
-  syncAuthModeUI();
-};
+window.saveOwnPin = async function saveOwnPin() {
+  var phoneNumber = normalizePhoneNumber(id('pin-create-phone-input').value.trim());
+  var newPin = id('new-pin-input').value.trim();
+  var confirmPin = id('confirm-new-pin-input').value.trim();
+  var errEl = id('pin-create-error');
+  errEl.textContent = '';
 
-/** Go back to phone entry step */
-window.backToPhoneEntry = function backToPhoneEntry() {
-  showPhoneEntry();
+  if (!phoneNumber) {
+    errEl.textContent = 'Enter a valid phone number.';
+    return;
+  }
+  if (!isValidPin(newPin)) {
+    errEl.textContent = 'PIN must be 4 to 6 digits.';
+    return;
+  }
+  if (newPin !== confirmPin) {
+    errEl.textContent = 'PIN confirmation does not match.';
+    return;
+  }
+
+  try {
+    var profile = await getUserProfile(phoneNumber);
+    if (!profile || profile.active === false || !(profile.role === 'admin' || profile.role === 'viewer')) {
+      errEl.textContent = 'This phone number is not authorized.';
+      return;
+    }
+
+    var payload = {
+      phone: phoneNumber,
+      username: sanitizeUsername(profile.username, profile.role === 'admin' ? 'Admin' : 'User'),
+      role: profile.role,
+      active: true,
+      pinPlain: newPin,
+      pinHash: await hashPin(phoneNumber, newPin),
+      pinVersion: 1,
+      updatedBy: authenticatedPhoneNumber || phoneNumber
+    };
+
+    upsertLocalUser(phoneNumber, Object.assign({}, payload, {
+      pinUpdatedAt: Date.now(),
+      updatedAt: Date.now()
+    }));
+
+    var db = getDb();
+    if (db) {
+      await db.collection(FS_USERS_COLLECTION).doc(phoneNumber).set(Object.assign({}, payload, {
+        pinUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }), { merge: true });
+    }
+
+    id('pin-phone-input').value = phoneNumber;
+    id('pin-input').value = '';
+    showPinLoginStep();
+    id('pin-error').textContent = 'PIN saved. You can login now.';
+  } catch (err) {
+    console.warn('Save own PIN error:', err.message);
+    errEl.textContent = 'Could not save PIN right now.';
+  }
 };
 
 /** Close modal without authenticating */
 window.cancelOtp = function cancelOtp() {
   id('otp-modal').classList.add('hidden');
-  confirmationResult = null;
-  currentPhoneNumber = null;
   _authCallback = null;
   showLockedState();
 };
@@ -1575,14 +1537,6 @@ window.logoutCurrentSession = async function logoutCurrentSession() {
   authenticatedPhoneNumber = null;
   currentUserProfile = null;
   syncAdminControls();
-  if (window.firebase && firebase.auth) {
-    try {
-      await firebase.auth().signOut();
-    } catch (err) {
-      console.warn('Logout failed:', err.message);
-    }
-  }
-  currentFirebasePhone = null;
   showLockedState();
   showOtpModal(() => render());
 };
@@ -1822,12 +1776,11 @@ window.closePicker = function closePicker() {
 };
 
 
-/** Allow keyboard submit/cancel for OTP modal */
+/** Allow keyboard submit/cancel for login modal */
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !id('otp-modal').classList.contains('hidden')) {
-    if (!id('pin-login-step').classList.contains('hidden')) loginWithPin();
-    else if (!id('otp-verify-step').classList.contains('hidden')) verifyOtp();
-    else sendOtp();
+    if (!id('pin-create-step').classList.contains('hidden')) saveOwnPin();
+    else loginWithPin();
   }
   if (e.key === 'Escape' && !id('otp-modal').classList.contains('hidden')) {
     cancelOtp();

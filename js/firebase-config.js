@@ -25,9 +25,9 @@ window.bootstrapUsers = {
   "+919738772736": {
     username: 'Admin',
     role: 'admin',
+    pinPlain: '2603',
     pinHash: 'cd9a4fc91b183dbbdb323624ad8f1aff1a5ea30fbcc80efceab9176d70645d38',
-    active: true,
-    phoneVerified: true
+    active: true
   }
 };
 
@@ -36,7 +36,7 @@ window.authorizedPhoneNumbers = Object.keys(window.bootstrapUsers).reduce(functi
   return map;
 }, {});
 
-(function initFirebaseOtp() {
+(function initFirebase() {
   var cfg = window.firebaseConfig || {};
   var placeholders = [
     "YOUR_API_KEY_HERE",
@@ -57,9 +57,6 @@ window.authorizedPhoneNumbers = Object.keys(window.bootstrapUsers).reduce(functi
   }
 
   firebase.initializeApp(cfg);
-  window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier("recaptcha-container", {
-    size: "invisible"
-  });
   window.db = firebase.firestore();
   window.firebaseReady = true;
 })();
