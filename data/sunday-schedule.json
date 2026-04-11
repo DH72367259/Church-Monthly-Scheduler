@@ -6,7 +6,7 @@
     "services": [
       {
         "time": "Sun 7:00 AM",
-        "location": "Kachohally",
+        "location": "Kachohalli",
         "programs": [
           {
             "role": "Incharge",
@@ -62,7 +62,7 @@
       },
       {
         "time": "Sun 9:30 AM",
-        "location": "Kachohally",
+        "location": "Kachohalli",
         "programs": [
           {
             "role": "Incharge",
@@ -118,7 +118,7 @@
       },
       {
         "time": "Sun 9:30 AM",
-        "location": "Girigowdana",
+        "location": "Girigowdanadoddi",
         "programs": [
           {
             "role": "Incharge",
@@ -152,7 +152,7 @@
     "services": [
       {
         "time": "Sun 7:00 AM",
-        "location": "Kachohally",
+        "location": "Kachohalli",
         "programs": [
           {
             "role": "Incharge",
@@ -203,7 +203,7 @@
       },
       {
         "time": "Sun 9:30 AM",
-        "location": "Kachohally",
+        "location": "Kachohalli",
         "programs": [
           {
             "role": "Incharge",
@@ -254,7 +254,7 @@
       },
       {
         "time": "Sun 9:30 AM",
-        "location": "Girigowdana",
+        "location": "Girigowdanadoddi",
         "programs": [
           {
             "role": "Incharge",
@@ -286,7 +286,7 @@
     "services": [
       {
         "time": "Sun 7:00 AM",
-        "location": "Kachohally",
+        "location": "Kachohalli",
         "programs": [
           {
             "role": "Incharge",
@@ -342,7 +342,7 @@
       },
       {
         "time": "Sun 9:30 AM",
-        "location": "Kachohally",
+        "location": "Kachohalli",
         "programs": [
           {
             "role": "Incharge",
@@ -398,7 +398,7 @@
       },
       {
         "time": "Sun 9:30 AM",
-        "location": "Girigowdana",
+        "location": "Girigowdanadoddi",
         "programs": [
           {
             "role": "Incharge",
