@@ -1,7 +1,7 @@
 /* ─── Church Schedule Service Worker ────────────────────────────────────── */
 'use strict';
 
-const CACHE = 'church-schedule-v35';
+const CACHE = 'church-schedule-v37';
 
 const SHELL = [
   './',
@@ -9,6 +9,7 @@ const SHELL = [
   './manifest.json',
   './css/style.css',
   './js/app.js',
+  './js/firebase-config.js',
   './icons/icon.svg'
 ];
 

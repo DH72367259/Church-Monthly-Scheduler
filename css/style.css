@@ -113,6 +113,23 @@ body {
 .download-btn:active { opacity: 1; }
 .download-btn.admin-visible { display: inline-block; }
 
+.admin-users-btn {
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 19px;
+  cursor: pointer;
+  padding: 4px 0 4px 8px;
+  line-height: 1;
+  opacity: .85;
+  transition: opacity .15s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+  display: none;
+}
+.admin-users-btn.admin-visible { display: inline-block; }
+.admin-users-btn:active { opacity: 1; }
+
 /* ─── utility hidden class ──────────────────────────────────────────────── */
 .hidden { display: none !important; }
 /* ─── hidden-tab: for viewer when month has no data ──────────────────────── */
@@ -783,7 +800,7 @@ body {
 .admin-badge  { background: #fde68a; color: #92400e; }
 .viewer-badge { background: #d1fae5; color: #065f46; }
 
-/* ─── PIN modal ───────────────────────────────────────────────────────────── */
+/* ─── OTP Modal (Firebase Authentication) ──────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -838,28 +855,58 @@ body {
   line-height: 1.5;
 }
 
-.pin-input {
+/* OTP Step visibility */
+.otp-step {
+  animation: fadeIn .2s ease;
+}
+
+.otp-step.hidden {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* OTP and Phone inputs */
+.otp-input {
   display: block;
   width: 100%;
   box-sizing: border-box;
   padding: 14px;
   border: 2px solid var(--gray-200);
   border-radius: 12px;
-  font-size: 24px;
-  letter-spacing: 8px;
+  font-size: 16px;
   text-align: center;
   outline: none;
   color: var(--gray-900);
-  -webkit-text-security: disc;
   transition: border-color .15s;
   margin-bottom: 8px;
+  font-family: monospace;
 }
 
-.pin-input:focus {
+#phone-input {
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+
+#otp-input {
+  font-size: 24px;
+  letter-spacing: 8px;
+  font-weight: 700;
+}
+
+.otp-input:focus {
   border-color: var(--blue);
 }
 
-.pin-submit {
+.otp-input::placeholder {
+  color: var(--gray-400);
+}
+
+/* Submit button */
+.otp-submit {
   display: block;
   width: 100%;
   padding: 14px;
@@ -872,18 +919,26 @@ body {
   cursor: pointer;
   transition: background .15s;
   margin-bottom: 14px;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.pin-submit:active { background: var(--blue-dark); }
+.otp-submit:active { background: var(--blue-dark); }
+.otp-submit:disabled {
+  background: var(--gray-400);
+  cursor: not-allowed;
+}
 
-.pin-error {
+/* Error message */
+.otp-error {
   color: #dc2626;
   font-size: 13px;
   min-height: 18px;
   margin-bottom: 12px;
+  line-height: 1.4;
 }
 
-.pin-cancel {
+/* Cancel / Back button */
+.otp-cancel {
   background: none;
   border: none;
   color: var(--gray-600);
@@ -892,6 +947,79 @@ body {
   padding: 6px;
   text-decoration: underline;
   -webkit-tap-highlight-color: transparent;
+  transition: color .15s;
+}
+
+.otp-cancel:active { color: var(--gray-700); }
+
+.admin-users-box {
+  max-width: 420px;
+  text-align: left;
+}
+
+.admin-users-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.admin-user-form {
+  margin-bottom: 14px;
+}
+
+.admin-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.admin-user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  background: #f9fafb;
+}
+
+.admin-user-meta {
+  min-width: 0;
+}
+
+.admin-user-phone {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gray-900);
+  word-break: break-word;
+  margin-bottom: 4px;
+}
+
+.admin-user-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mini-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mini-btn.danger {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 /* ─── Responsive tweaks ───────────────────────────────────────────────────── */

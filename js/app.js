@@ -2,19 +2,28 @@
 'use strict';
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   ACCESS PINs — stored as SHA-256 hashes (never as plaintext).
-   To change a PIN: compute sha256(newPin) and replace the hash below.
-   VIEWER_HASH : congregation members — current month only.
-   ADMIN_HASH  : admin — all months + Admin badge.
+   FIREBASE OTP AUTHENTICATION
+   Users log in with their phone number and verify via OTP.
+   Access roles determined by authorized phone numbers in firebase-config.js
    ══════════════════════════════════════════════════════════════════════════ */
-const VIEWER_HASH = '7599dc4548df450045cf9bc258c43c654ea6d4af04074eb0292262e3d5187d5b';
-const ADMIN_HASH  = '120e90dfb21d132a40c6281f8c8f25331969559e200f589bfe8e775e333b5b3a';
 
-/* ── GitHub API config (for publish toggle) ──────────────────────────────── */
-const GH_OWNER     = 'DH72367259';
-const GH_REPO      = 'Church-Monthly-Scheduler';
-const GH_BRANCH    = 'main';
-const GH_TOKEN_KEY = 'pf_gh_token'; /* localStorage key — stays on this device */
+/* ── Role-based phone numbers mapping (from firebase-config.js) ──────────── */
+function getAuthorizedPhoneNumbers() {
+  return (window.authorizedPhoneNumbers && typeof window.authorizedPhoneNumbers === 'object')
+    ? window.authorizedPhoneNumbers
+    : {};
+}
+
+/* ── Firebase OTP state ───────────────────────────────────────────────────── */
+let confirmationResult = null;  /* Firebase ConfirmationResult from sendSignInCode */
+let currentPhoneNumber = null;  /* Phone number being verified */
+let authenticatedPhoneNumber = null;
+let _visibilityUnsub = null;
+let _adminUsersUnsub = null;
+
+/* ── Firestore collections ──────────────────────────────────────────────── */
+const FS_USERS_COLLECTION      = 'authorizedUsers';
+const FS_VISIBILITY_COLLECTION = 'monthVisibility';
 
 /* ── Admin one-session lock (browser-level) ─────────────────────────────── */
 const ADMIN_LOCK_KEY        = 'pf_admin_lock';
@@ -30,14 +39,8 @@ const ADMIN_SESSION_ID      = (function() {
 })();
 let _adminHeartbeatTimer = null;
 
-/** SHA-256 hash of a string via Web Crypto API */
-async function sha256(text) {
-  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
 /* Session-level access role: null | 'viewer' | 'admin' */
-let accessRole = null;  /* PIN required on every app load */
+let accessRole = null;  /* Auth required on every app load */
 
 /* ── App state ────────────────────────────────────────────────────────────── */
 const state = {
@@ -69,6 +72,113 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('beforeunload', releaseAdminLock);
   window.addEventListener('pagehide', releaseAdminLock);
 });
+
+function getDb() {
+  return window.db || null;
+}
+
+function monthDocId(tab, monthKey) {
+  return tab + '__' + monthKey;
+}
+
+function markBasePublished(arr) {
+  arr.forEach(function(m) {
+    if (typeof m.basePublished === 'undefined') m.basePublished = (m.published !== false);
+    if (typeof m.published === 'undefined') m.published = m.basePublished;
+  });
+}
+
+function applyVisibilityOverrides(overrides) {
+  [['sunday', state.sundayData], ['tuesday', state.tuesdayData], ['special', state.specialData], ['fasting', state.fastingData]].forEach(function(entry) {
+    var tab = entry[0];
+    var arr = entry[1];
+    arr.forEach(function(month) {
+      var doc = overrides[monthDocId(tab, month.monthKey)];
+      month.published = doc ? (doc.published !== false) : month.basePublished;
+    });
+  });
+}
+
+function stopFirestoreSubscriptions() {
+  if (_visibilityUnsub) { _visibilityUnsub(); _visibilityUnsub = null; }
+  if (_adminUsersUnsub) { _adminUsersUnsub(); _adminUsersUnsub = null; }
+}
+
+function subscribeVisibilityOverrides() {
+  var db = getDb();
+  if (!db) return;
+  if (_visibilityUnsub) _visibilityUnsub();
+  _visibilityUnsub = db.collection(FS_VISIBILITY_COLLECTION).onSnapshot(function(snapshot) {
+    var overrides = {};
+    snapshot.forEach(function(doc) {
+      overrides[doc.id] = doc.data() || {};
+    });
+    applyVisibilityOverrides(overrides);
+    refreshAllTabStates();
+    if (accessRole) render();
+  }, function(err) {
+    console.warn('Visibility subscription error:', err.message);
+  });
+}
+
+async function getRoleForPhone(phoneNumber) {
+  var db = getDb();
+  if (db) {
+    try {
+      var doc = await db.collection(FS_USERS_COLLECTION).doc(phoneNumber).get();
+      if (doc.exists) {
+        var data = doc.data() || {};
+        if (data.active === false) return null;
+        if (data.role === 'viewer' || data.role === 'admin') return data.role;
+      }
+    } catch (err) {
+      console.warn('Firestore role lookup failed:', err.message);
+    }
+  }
+  var bootstrap = getAuthorizedPhoneNumbers();
+  return bootstrap[phoneNumber] || null;
+}
+
+function renderAdminUsersList(users) {
+  var host = id('admin-users-list');
+  if (!host) return;
+  if (!users.length) {
+    host.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><p>No authorized users yet.</p></div>';
+    return;
+  }
+
+  host.innerHTML = users.map(function(user) {
+    var roleClass = user.role === 'admin' ? 'admin-badge' : 'viewer-badge';
+    return '<div class="admin-user-row">'
+      + '<div class="admin-user-meta">'
+      + '<div class="admin-user-phone">' + esc(user.phone) + '</div>'
+      + '<div><span class="role-badge ' + roleClass + '">' + esc(user.role) + '</span></div>'
+      + '</div>'
+      + '<div class="admin-user-actions">'
+      + '<button class="mini-btn" onclick="prefillAuthorizedUser(\'' + esc(user.phone).replace(/&#039;/g, "\\'") + '\',\'' + user.role + '\')">Edit</button>'
+      + '<button class="mini-btn danger" onclick="removeAuthorizedUser(\'' + esc(user.phone).replace(/&#039;/g, "\\'") + '\')">Remove</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function subscribeAdminUsers() {
+  var db = getDb();
+  if (!db || accessRole !== 'admin') return;
+  if (_adminUsersUnsub) _adminUsersUnsub();
+  _adminUsersUnsub = db.collection(FS_USERS_COLLECTION).onSnapshot(function(snapshot) {
+    var users = [];
+    snapshot.forEach(function(doc) {
+      var data = doc.data() || {};
+      if (data.active === false) return;
+      users.push({ phone: doc.id, role: data.role || 'viewer' });
+    });
+    users.sort(function(a, b) { return a.phone.localeCompare(b.phone); });
+    renderAdminUsersList(users);
+  }, function(err) {
+    console.warn('Admin users subscription error:', err.message);
+  });
+}
 
 function _readAdminLock() {
   try {
@@ -138,6 +248,91 @@ function releaseAdminLock() {
   _stopAdminHeartbeat();
 }
 
+window.openAdminUsersModal = function openAdminUsersModal() {
+  if (accessRole !== 'admin') return;
+  id('admin-users-modal').classList.remove('hidden');
+  id('admin-user-error').textContent = '';
+  id('admin-user-phone').value = '';
+  id('admin-user-role').value = 'viewer';
+  subscribeAdminUsers();
+};
+
+window.closeAdminUsersModal = function closeAdminUsersModal() {
+  id('admin-users-modal').classList.add('hidden');
+  id('admin-user-error').textContent = '';
+};
+
+window.prefillAuthorizedUser = function prefillAuthorizedUser(phone, role) {
+  if (accessRole !== 'admin') return;
+  id('admin-user-phone').value = phone;
+  id('admin-user-role').value = role || 'viewer';
+  id('admin-user-error').textContent = '';
+};
+
+window.saveAuthorizedUser = async function saveAuthorizedUser() {
+  if (accessRole !== 'admin') return;
+  var db = getDb();
+  var phone = id('admin-user-phone').value.trim();
+  var role = id('admin-user-role').value;
+  var errEl = id('admin-user-error');
+  errEl.textContent = '';
+
+  if (!db) {
+    errEl.textContent = 'Firestore is not configured yet.';
+    return;
+  }
+  if (!/^\+\d{10,15}$/.test(phone)) {
+    errEl.textContent = 'Use phone format like +1234567890';
+    return;
+  }
+  if (role !== 'viewer' && role !== 'admin') {
+    errEl.textContent = 'Role must be viewer or admin.';
+    return;
+  }
+
+  try {
+    await db.collection(FS_USERS_COLLECTION).doc(phone).set({
+      phone: phone,
+      role: role,
+      active: true,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: authenticatedPhoneNumber || null
+    }, { merge: true });
+    id('admin-user-phone').value = '';
+    id('admin-user-role').value = 'viewer';
+  } catch (err) {
+    console.warn('Save user error:', err.message);
+    errEl.textContent = 'Could not save user. Check Firestore rules.';
+  }
+};
+
+window.removeAuthorizedUser = async function removeAuthorizedUser(phone) {
+  if (accessRole !== 'admin') return;
+  var db = getDb();
+  var errEl = id('admin-user-error');
+  errEl.textContent = '';
+  if (!db) {
+    errEl.textContent = 'Firestore is not configured yet.';
+    return;
+  }
+  if (phone === authenticatedPhoneNumber) {
+    errEl.textContent = 'You cannot remove your own active admin account from this session.';
+    return;
+  }
+
+  try {
+    await db.collection(FS_USERS_COLLECTION).doc(phone).set({
+      phone: phone,
+      active: false,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: authenticatedPhoneNumber || null
+    }, { merge: true });
+  } catch (err) {
+    console.warn('Remove user error:', err.message);
+    errEl.textContent = 'Could not remove user. Check Firestore rules.';
+  }
+};
+
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   navigator.serviceWorker.register('./sw.js').then(reg => {
@@ -198,6 +393,11 @@ async function loadData() {
       state.fastingData = await fr.json();
     }
 
+    markBasePublished(state.sundayData);
+    markBasePublished(state.tuesdayData);
+    markBasePublished(state.specialData);
+    markBasePublished(state.fastingData);
+
     /* Default each tab to the first non-past month (current month), fall back to last */
     const _si  = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
     state.sundayIdx  = _si  >= 0 ? _si  : Math.max(0, state.sundayData.length  - 1);
@@ -213,11 +413,11 @@ async function loadData() {
     const _fi  = state.fastingData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
     state.fastingIdx = _fi >= 0 ? _fi : Math.max(0, state.fastingData.length - 1);
 
-    /* Enable/disable the Special Days tab based on whether ANY events exist */
+    /* Enable/disable tabs based on current visibility/data */
     refreshAllTabStates();
 
-    /* Gate entire app behind PIN — no data visible without a valid PIN */
-    showPinModal(() => render());
+    /* Gate entire app behind OTP — no data visible without authentication */
+    showOtpModal(() => render());
   } catch (err) {
     content.innerHTML = `
       <div class="error-card">
@@ -243,6 +443,11 @@ async function refreshData(forceRender) {
     const newTuesday = await tr.json();
     const newSpecial = xr.ok ? await xr.json() : state.specialData;
     const newFasting = fr.ok ? await fr.json() : state.fastingData;
+
+    markBasePublished(newSunday);
+    markBasePublished(newTuesday);
+    markBasePublished(newSpecial);
+    markBasePublished(newFasting);
 
     const changed = JSON.stringify(newSunday)  !== JSON.stringify(state.sundayData)  ||
                     JSON.stringify(newTuesday) !== JSON.stringify(state.tuesdayData) ||
@@ -378,15 +583,28 @@ function isPublishedFor(m) {
 /** Keep admin-only controls hidden for non-admin roles */
 function syncAdminControls() {
   var dlBtn = id('download-btn');
+  var usersBtn = id('admin-users-btn');
   if (accessRole !== 'admin') {
     if (dlBtn) dlBtn.remove();
+    if (usersBtn) usersBtn.remove();
     return;
   }
 
-  /* Admin: ensure the button exists even if stale cached HTML removed it */
+  /* Admin: ensure action buttons exist even if stale cached HTML removed them */
+  var header = document.querySelector('.app-header');
+  if (!header) return;
+
+  if (!usersBtn) {
+    usersBtn = document.createElement('button');
+    usersBtn.className = 'admin-users-btn';
+    usersBtn.id = 'admin-users-btn';
+    usersBtn.setAttribute('aria-label', 'Manage users');
+    usersBtn.innerHTML = '&#128101;';
+    usersBtn.onclick = window.openAdminUsersModal;
+    header.appendChild(usersBtn);
+  }
+
   if (!dlBtn) {
-    var header = document.querySelector('.app-header');
-    if (!header) return;
     dlBtn = document.createElement('button');
     dlBtn.className = 'download-btn admin-visible';
     dlBtn.id = 'download-btn';
@@ -397,6 +615,7 @@ function syncAdminControls() {
     return;
   }
 
+  usersBtn.classList.add('admin-visible');
   dlBtn.classList.add('admin-visible');
 }
 
@@ -668,30 +887,15 @@ function renderFasting() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   PUBLISH TOGGLE — GitHub API
+   PUBLISH TOGGLE — FIRESTORE
    ══════════════════════════════════════════════════════════════════════════ */
-const _GH_FILE_MAP = {
-  sunday:  'data/sunday-schedule.json',
-  tuesday: 'data/tuesday-prayer.json',
-  special: 'data/special-days.json',
-  fasting: 'data/fasting-prayer.json'
-};
-
-/** Encode a UTF-8 string to base64 (handles non-ASCII) */
-function _toBase64(str) {
-  const bytes = new TextEncoder().encode(str);
-  let binary = '';
-  bytes.forEach(b => { binary += String.fromCharCode(b); });
-  return btoa(binary);
-}
-
-/**
- * Toggle the `published` flag for a month via GitHub API.
- * Admin only. Updates local state immediately for instant UI feedback.
- * Changes are live for all users after GitHub Pages re-deploys (~30–60 s).
- */
 window.togglePublish = async function togglePublish(tab, monthKey, newValue) {
   if (accessRole !== 'admin') return;
+  var db = getDb();
+  if (!db) {
+    alert('Firestore is not configured yet. Finish Firebase setup first.');
+    return;
+  }
 
   /* Update local state immediately so UI reflects the change at once */
   const localArr = getTabArr(tab);
@@ -700,80 +904,17 @@ window.togglePublish = async function togglePublish(tab, monthKey, newValue) {
   refreshAllTabStates();
   render();
 
-  /* Attempt to persist via GitHub API */
-  let token = localStorage.getItem(GH_TOKEN_KEY);
-  if (!token) {
-    token = prompt(
-      'Enter your GitHub Personal Access Token (PAT) to save this change for all users.\n\n' +
-      'Scope required: "Contents write" for ' + GH_REPO + '\n\n' +
-      'Leave empty to apply only on this device (not saved for others).'
-    );
-    if (!token || !token.trim()) return; /* user cancelled or skipped */
-    token = token.trim();
-    localStorage.setItem(GH_TOKEN_KEY, token);
-  }
-
-  const path = _GH_FILE_MAP[tab];
-  if (!path) return;
-
   try {
-    /* GET current file content + SHA for the PUT */
-    const apiBase = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/';
-    const getResp = await fetch(apiBase + path + '?ref=' + GH_BRANCH, {
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Accept': 'application/vnd.github.v3+json'
-      }
+    await db.collection(FS_VISIBILITY_COLLECTION).doc(monthDocId(tab, monthKey)).set({
+      tab: tab,
+      monthKey: monthKey,
+      published: !!newValue,
+      updatedBy: authenticatedPhoneNumber || null,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-
-    if (getResp.status === 401 || getResp.status === 403) {
-      localStorage.removeItem(GH_TOKEN_KEY);
-      alert('GitHub token is invalid or lacks permission. Please re-enter your token next time.');
-      return;
-    }
-    if (!getResp.ok) throw new Error('GitHub GET failed: ' + getResp.status);
-
-    const fileData = await getResp.json();
-    const sha      = fileData.sha;
-
-    /* Decode → update → re-encode */
-    const decoded  = new TextDecoder().decode(
-      Uint8Array.from(atob(fileData.content.replace(/\n/g, '')), c => c.charCodeAt(0))
-    );
-    const jsonArr  = JSON.parse(decoded);
-    const target   = jsonArr.find(m => m.monthKey === monthKey);
-    if (target) target.published = newValue;
-    const updated  = _toBase64(JSON.stringify(jsonArr, null, 2) + '\n');
-
-    /* PUT updated file */
-    const putResp = await fetch(apiBase + path, {
-      method: 'PUT',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        message: (newValue ? 'Publish' : 'Unpublish') + ': ' + tab + ' ' + monthKey,
-        content: updated,
-        sha:     sha,
-        branch:  GH_BRANCH
-      })
-    });
-
-    if (putResp.status === 401 || putResp.status === 403) {
-      localStorage.removeItem(GH_TOKEN_KEY);
-      alert('GitHub token rejected. Please re-enter your token next time.');
-      return;
-    }
-    if (!putResp.ok) {
-      const errBody = await putResp.json().catch(() => ({}));
-      throw new Error(errBody.message || 'GitHub PUT failed: ' + putResp.status);
-    }
-    /* Success — change will propagate to all users when GitHub Pages deploys */
   } catch (err) {
-    /* Non-fatal: local state is already updated, just warn */
-    console.warn('Publish toggle GitHub API error:', err.message);
+    console.warn('Publish toggle Firestore error:', err.message);
+    alert('Could not save publish change. Check Firebase Firestore setup and rules.');
   }
 };
 
@@ -851,89 +992,172 @@ function archiveBanner() {
   return `<div class="archive-banner">🔒 Archived — read-only${roleNote}</div>`;
 }
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   PIN MODAL
-   ══════════════════════════════════════════════════════════════════════════ */
-let _pinCallback = null;
+/* ════════════════════════════════════════════════════════════════════════════════
+   FIREBASE OTP MODAL & AUTHENTICATION
+   ════════════════════════════════════════════════════════════════════════════════ */
+let _authCallback = null;
 
-/** Show the PIN modal; onSuccess() called once correct PIN is entered */
-function showPinModal(onSuccess) {
-  _pinCallback = onSuccess;
-  id('pin-modal').classList.remove('hidden');
-  id('pin-input').value = '';
-  id('pin-error').textContent = '';
-  setTimeout(() => id('pin-input').focus(), 80);
+/** Show the OTP modal; onSuccess() called once user is authenticated */
+function showOtpModal(onSuccess) {
+  _authCallback = onSuccess;
+  id('otp-modal').classList.remove('hidden');
+  showPhoneEntry();
 }
 
-/** Called by the modal Proceed button — async because we hash the input */
-window.submitPin = async function submitPin() {
-  const entered = id('pin-input').value.trim();
-  if (!entered) return;
-  let hash;
+/**  Show phone entry step */
+function showPhoneEntry() {
+  id('phone-entry-step').classList.remove('hidden');
+  id('otp-verify-step').classList.add('hidden');
+  id('phone-input').value = '';
+  id('phone-error').textContent = '';
+  setTimeout(() => id('phone-input').focus(), 80);
+}
+
+/** Show OTP verification step */
+function showOtpEntry() {
+  id('phone-entry-step').classList.add('hidden');
+  id('otp-verify-step').classList.remove('hidden');
+  id('otp-input').value = '';
+  id('otp-error').textContent = '';
+  setTimeout(() => id('otp-input').focus(), 80);
+}
+
+/** Send OTP to entered phone number */
+window.sendOtp = async function sendOtp() {
+  const phoneNumber = id('phone-input').value.trim();
+  
+  if (!phoneNumber) {
+    id('phone-error').textContent = 'Please enter a phone number.';
+    return;
+  }
+  
+  /* Validate phone number format */
+  if (!/^\+\d{10,15}$/.test(phoneNumber)) {
+    id('phone-error').textContent = 'Please use format: +1234567890';
+    return;
+  }
+
+  if (!window.firebaseReady || !window.firebase || !window.recaptchaVerifier) {
+    id('phone-error').textContent = 'Firebase OTP is not configured yet. Ask admin to complete setup.';
+    return;
+  }
+
   try {
-    hash = await sha256(entered);
-  } catch (e) {
-    id('pin-error').textContent = 'Verification error. Please try again.';
-    return;
+    const appVerifier = window.recaptchaVerifier;
+    /* Send OTP via Firebase */
+    confirmationResult = await firebase.auth().signInWithPhoneNumber(phoneNumber, appVerifier);
+    currentPhoneNumber = phoneNumber;
+    id('phone-error').textContent = '';
+    showOtpEntry();
+  } catch (error) {
+    console.error('OTP Send Error:', error);
+    id('phone-error').textContent = error.message || 'Failed to send OTP. Try again.';
   }
-  if (hash === ADMIN_HASH) {
-    if (!tryAcquireAdminLock()) {
-      id('pin-error').textContent = 'Admin is already logged in on another active session. Try again after that session closes.';
-      id('pin-input').value = '';
-      id('pin-input').focus();
-      return;
-    }
-    accessRole = 'admin';
-    /* Reset to first non-past (current) month on login */
-    const _asi = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
-    if (_asi >= 0) state.sundayIdx = _asi;
-    const _ati = state.tuesdayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
-    if (_ati >= 0) state.tuesdayIdx = _ati;
-    const _aspi = state.specialData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
-    if (_aspi >= 0) state.specialIdx = _aspi;
-    const _afi = state.fastingData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
-    if (_afi >= 0) state.fastingIdx = _afi;
-  } else if (hash === VIEWER_HASH) {
-    accessRole = 'viewer';
-    /* For viewer: default to first PUBLISHED non-past month */
-    function _firstVisible(arr) {
-      var i = arr.findIndex(function(m){ return !isPastMonth(m.monthKey) && m.published !== false; });
-      if (i >= 0) return i;
-      /* fallback: first published month at all */
-      i = arr.findIndex(function(m){ return m.published !== false; });
-      return i >= 0 ? i : 0;
-    }
-    state.sundayIdx  = _firstVisible(state.sundayData);
-    state.tuesdayIdx = _firstVisible(state.tuesdayData);
-    state.specialIdx = _firstVisible(state.specialData);
-    state.fastingIdx = _firstVisible(state.fastingData);
-  } else {
-    id('pin-error').textContent = 'Incorrect PIN. Please try again.';
-    id('pin-input').value = '';
-    id('pin-input').focus();
-    return;
-  }
-  syncAdminControls();
-  id('pin-modal').classList.add('hidden');
-  if (_pinCallback) { _pinCallback(); _pinCallback = null; }
 };
 
-/** Close modal without unlocking */
-window.cancelPin = function cancelPin() {
-  id('pin-modal').classList.add('hidden');
-  _pinCallback = null;
+/** Verify OTP code */
+window.verifyOtp = async function verifyOtp() {
+  const otpCode = id('otp-input').value.trim();
+  
+  if (!otpCode || otpCode.length !== 6) {
+    id('otp-error').textContent = 'Please enter a valid 6-digit code.';
+    return;
+  }
+
+  if (!confirmationResult) {
+    id('otp-error').textContent = 'Session expired. Please start over.';
+    showPhoneEntry();
+    return;
+  }
+
+  try {
+    /* Verify OTP with Firebase */
+    await confirmationResult.confirm(otpCode);
+
+    /* Determine access role based on Firestore-backed user registry */
+    authenticatedPhoneNumber = currentPhoneNumber;
+    accessRole = await getRoleForPhone(currentPhoneNumber);
+
+    if (!accessRole) {
+      await firebase.auth().signOut().catch(function() {});
+      authenticatedPhoneNumber = null;
+      id('otp-error').textContent = 'This phone number is not authorized. Contact your administrator.';
+      id('otp-input').value = '';
+      id('otp-input').focus();
+      return;
+    }
+
+    if (accessRole === 'admin') {
+      /* Try to acquire admin lock (one session only) */
+      if (!tryAcquireAdminLock()) {
+        id('otp-error').textContent = 'Admin is already logged in on another active session. Try again later.';
+        id('otp-input').value = '';
+        id('otp-input').focus();
+        return;
+      }
+      /* Reset to first non-past month on admin login */
+      const _asi = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+      if (_asi >= 0) state.sundayIdx = _asi;
+      const _ati = state.tuesdayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+      if (_ati >= 0) state.tuesdayIdx = _ati;
+      const _aspi = state.specialData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+      if (_aspi >= 0) state.specialIdx = _aspi;
+      const _afi = state.fastingData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
+      if (_afi >= 0) state.fastingIdx = _afi;
+      subscribeVisibilityOverrides();
+      subscribeAdminUsers();
+    } else if (accessRole === 'viewer') {
+      /* For viewer: default to first PUBLISHED non-past month */
+      function _firstVisible(arr) {
+        var i = arr.findIndex(function(m){ return !isPastMonth(m.monthKey) && m.published !== false; });
+        if (i >= 0) return i;
+        i = arr.findIndex(function(m){ return m.published !== false; });
+        return i >= 0 ? i : 0;
+      }
+      state.sundayIdx  = _firstVisible(state.sundayData);
+      state.tuesdayIdx = _firstVisible(state.tuesdayData);
+      state.specialIdx = _firstVisible(state.specialData);
+      state.fastingIdx = _firstVisible(state.fastingData);
+      subscribeVisibilityOverrides();
+    }
+
+    syncAdminControls();
+    confirmationResult = null;
+    currentPhoneNumber = null;
+    id('otp-modal').classList.add('hidden');
+    if (_authCallback) { _authCallback(); _authCallback = null; }
+  } catch (error) {
+    console.error('OTP Verification Error:', error);
+    id('otp-error').textContent = error.message || 'Invalid OTP. Please try again.';
+    id('otp-input').value = '';
+    id('otp-input').focus();
+  }
+};
+
+/** Go back to phone entry step */
+window.backToPhoneEntry = function backToPhoneEntry() {
+  showPhoneEntry();
+};
+
+/** Close modal without authenticating */
+window.cancelOtp = function cancelOtp() {
+  id('otp-modal').classList.add('hidden');
+  confirmationResult = null;
+  currentPhoneNumber = null;
+  authenticatedPhoneNumber = null;
+  _authCallback = null;
   id('content').innerHTML = `
     <div style="text-align:center;padding:60px 24px;">
-      <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+      <div style="font-size:48px;margin-bottom:16px;">🔐</div>
       <p style="font-size:16px;font-weight:600;color:#374151;margin-bottom:8px;">Schedule is locked</p>
-      <p style="font-size:13px;color:#6b7280;margin-bottom:24px;">Enter your PIN to view the schedule.</p>
-      <button class="pin-submit" style="max-width:200px;margin:0 auto;" onclick="showPinModal(() => render())">Enter PIN</button>
+      <p style="font-size:13px;color:#6b7280;margin-bottom:24px;">Enter your phone number to sign in via OTP.</p>
+      <button class="otp-submit" style="max-width:200px;margin:0 auto;" onclick="showOtpModal(() => render())">Sign In</button>
     </div>`;
 };
 
 /* ── Refresh app ────────────────────────────────────────────────── */
 window.refreshApp = function refreshApp() {
-  if (!accessRole) return; /* no PIN entered yet */
+  if (!accessRole) return; /* not authenticated yet */
   var btn = id('refresh-btn');
   if (btn) btn.classList.add('spinning');
   /* Render immediately from current state so UI feels instant */
@@ -1166,13 +1390,14 @@ window.closePicker = function closePicker() {
 };
 
 
-/** Allow Enter key to submit PIN */
+/** Allow keyboard submit/cancel for OTP modal */
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !id('pin-modal').classList.contains('hidden')) {
-    submitPin();
+  if (e.key === 'Enter' && !id('otp-modal').classList.contains('hidden')) {
+    if (!id('otp-verify-step').classList.contains('hidden')) verifyOtp();
+    else sendOtp();
   }
-  if (e.key === 'Escape' && !id('pin-modal').classList.contains('hidden')) {
-    cancelPin();
+  if (e.key === 'Escape' && !id('otp-modal').classList.contains('hidden')) {
+    cancelOtp();
   }
 });
 

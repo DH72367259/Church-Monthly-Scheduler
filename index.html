@@ -20,6 +20,11 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
 
   <link rel="stylesheet" href="css/style.css" />
+
+  <!-- Firebase (compat build for non-module scripts) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div id="app">
@@ -64,28 +69,75 @@
     </main>
 
   </div><!-- /#app -->
-  <!-- ── PIN modal overlay ───────────────────────────────────────────────── -->
-  <div class="modal-overlay hidden" id="pin-modal" role="dialog"
-       aria-modal="true" aria-labelledby="pin-modal-title">
+
+  <!-- ── reCAPTCHA container ──────────────────────────────────────────────── -->
+  <div id="recaptcha-container"></div>
+
+  <!-- ── OTP modal overlay ───────────────────────────────────────────────── -->
+  <div class="modal-overlay hidden" id="otp-modal" role="dialog"
+       aria-modal="true" aria-labelledby="otp-modal-title">
     <div class="modal-box">
-      <div class="modal-icon">🔒</div>
-      <h2 class="modal-title" id="pin-modal-title">Enter PIN</h2>
-      <p class="modal-desc">
-        Enter your PIN to view the schedule.
-      </p>
-      <input class="pin-input"
-             id="pin-input"
-             type="password"
-             inputmode="numeric"
-             maxlength="6"
-             placeholder="••••"
-             autocomplete="off"
-             aria-label="Enter PIN" />
-      <p class="pin-error" id="pin-error" aria-live="polite"></p>
-      <button class="pin-submit" onclick="submitPin()">Proceed</button>
-      <button class="pin-cancel" onclick="cancelPin()">Cancel</button>
+      <div class="modal-icon">🔐</div>
+      <h2 class="modal-title" id="otp-modal-title">Sign In with OTP</h2>
+      
+      <!-- Step 1: Phone Number Entry -->
+      <div id="phone-entry-step" class="otp-step">
+        <p class="modal-desc">Enter your phone number to receive an OTP.</p>
+        <input class="otp-input"
+               id="phone-input"
+               type="tel"
+               placeholder="+1234567890"
+               autocomplete="tel"
+               aria-label="Enter phone number" />
+        <p class="otp-error" id="phone-error" aria-live="polite"></p>
+        <button class="otp-submit" onclick="sendOtp()">Send OTP</button>
+        <button class="otp-cancel" onclick="cancelOtp()">Cancel</button>
+      </div>
+
+      <!-- Step 2: OTP Verification -->
+      <div id="otp-verify-step" class="otp-step hidden">
+        <p class="modal-desc">Enter the 6-digit code sent to your phone.</p>
+        <input class="otp-input"
+               id="otp-input"
+               type="text"
+               inputmode="numeric"
+               maxlength="6"
+               placeholder="000000"
+               autocomplete="off"
+               aria-label="Enter OTP" />
+        <p class="otp-error" id="otp-error" aria-live="polite"></p>
+        <button class="otp-submit" onclick="verifyOtp()">Verify OTP</button>
+        <button class="otp-cancel" onclick="backToPhoneEntry()">Back</button>
+      </div>
     </div>
   </div>
+
+  <!-- ── Admin users modal ───────────────────────────────────────────────── -->
+  <div class="modal-overlay hidden" id="admin-users-modal" role="dialog"
+       aria-modal="true" aria-labelledby="admin-users-title">
+    <div class="modal-box admin-users-box">
+      <div class="admin-users-header-row">
+        <h2 class="modal-title" id="admin-users-title">Manage Users</h2>
+        <button class="picker-close" onclick="closeAdminUsersModal()" aria-label="Close">&#10005;</button>
+      </div>
+      <p class="modal-desc">Add viewer/admin phone numbers and update access immediately.</p>
+
+      <div class="admin-user-form">
+        <input class="otp-input" id="admin-user-phone" type="tel" placeholder="+1234567890" aria-label="Phone number" />
+        <select id="admin-user-role" class="picker-select">
+          <option value="viewer">Viewer</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="otp-submit" onclick="saveAuthorizedUser()">Save User</button>
+        <p class="otp-error" id="admin-user-error" aria-live="polite"></p>
+      </div>
+
+      <div class="admin-users-list" id="admin-users-list"></div>
+    </div>
+  </div>
+
+  <!-- Firebase config -->
+  <script src="js/firebase-config.js"></script>
   <script src="js/app.js"></script>
   <!-- ── Month picker overlay ─────────────────────────────────────────────── -->
   <div class="picker-overlay hidden" id="month-picker">
