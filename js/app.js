@@ -936,28 +936,26 @@ function updateDrawerState(tab) {
 }
 
 function refreshAllTabStates() {
-  const now    = new Date();
-  const curKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-
   const tuesdayBtn = id('drawer-tuesday');
   const specialBtn = id('drawer-special');
   const fastingBtn = id('drawer-fasting');
 
   if (accessRole === 'viewer') {
-    /* Tuesday: visible if current month is published AND has sessions */
-    const td = state.tuesdayData.find(function(m){ return m.monthKey === curKey; });
-    const hasTuesday = !!(td && td.published !== false && td.tuesdays && td.tuesdays.length > 0);
+    /* Viewer tabs should follow admin publish settings across available months. */
+    const hasTuesday = state.tuesdayData.some(function(m){
+      return m && m.published !== false;
+    });
     if (tuesdayBtn) tuesdayBtn.classList.toggle('hidden-tab', !hasTuesday);
 
-    /* Special: visible if any published month has events */
+    /* Special: visible if any month is published */
     const hasSpecial = state.specialData.some(function(m){
-      return m.published !== false && m.events && m.events.length > 0;
+      return m && m.published !== false;
     });
     if (specialBtn) specialBtn.classList.toggle('hidden-tab', !hasSpecial);
 
-    /* Fasting: visible if any published month has sessions */
+    /* Fasting: visible if any month is published */
     const hasFasting = state.fastingData.some(function(m){
-      return m.published !== false && m.sessions && m.sessions.length > 0;
+      return m && m.published !== false;
     });
     if (fastingBtn) fastingBtn.classList.toggle('hidden-tab', !hasFasting);
 
