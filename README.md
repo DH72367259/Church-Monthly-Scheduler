@@ -2,64 +2,54 @@
 
 Live app: https://dh72367259.github.io/Church-Monthly-Scheduler/
 
-The app now uses:
-- Firebase Phone OTP for login
-- Firestore for user access management
-- Firestore for month/tab visibility toggles
-- No GitHub token prompt for publish/unpublish
+The app now supports:
+- OTP login with Firebase Phone Authentication
+- PIN unlock on browsers that already completed OTP registration for that phone
+- Admin-managed users, roles, PINs, and month visibility in Firestore
+- Maximum 3 active admins
 
-## What changed
+## Bootstrap admin
 
-Admin can now do these directly from the app UI:
-- add viewer phone numbers
-- add admin phone numbers
-- remove users
-- change a month/tab visibility using the toggle
+The default bootstrap admin is already configured in [js/firebase-config.js](js/firebase-config.js):
+- Username: `Admin`
+- Phone: `9738772736` which is normalized as `+919738772736`
+- Initial PIN: `2603`
 
-These changes update through Firestore immediately for all users using the app.
+Change that PIN later from the admin Manage Users screen.
 
-## 1. Firebase setup
+Important security behavior:
+- OTP is required the first time on each browser/device.
+- PIN login works only after that browser already has a valid Firebase phone session for the same number.
+- This keeps Firestore security active for both viewer and admin features.
 
-### A. Enable Phone OTP
+## Firebase setup
+
+### Enable phone auth
 
 1. Open Firebase Console.
-2. Create/select project.
-3. Go to Authentication -> Sign-in method.
+2. Create or select your project.
+3. Go to Authentication, then Sign-in method.
 4. Enable Phone.
-5. Go to Authentication -> Settings -> Authorized domains.
-6. Add:
-   - dh72367259.github.io
-   - localhost
+5. Go to Authentication, then Settings, then Authorized domains.
+6. Add `dh72367259.github.io` and `localhost`.
 
-### B. Enable Firestore
+### Enable Firestore
 
-1. Firebase Console -> Firestore Database.
-2. Click Create database.
-3. Start in production mode.
-4. Choose your region.
-5. Create database.
+1. Open Firestore Database.
+2. Create the database in production mode.
+3. Choose your region.
 
-## 2. Update js/firebase-config.js
+### Fill config values
 
-Open js/firebase-config.js and fill your real Firebase Web App config:
-- apiKey
-- authDomain
-- projectId
-- storageBucket
-- messagingSenderId
-- appId
+Update the placeholders in [js/firebase-config.js](js/firebase-config.js) with your Firebase web app config.
 
-Important:
-- Keep at least one admin number in window.authorizedPhoneNumbers initially.
-- That bootstrap admin is needed for the first admin login.
-- After first login, admin can manage users from UI and you do not need to keep editing the file for every user.
+## Firestore rules
 
-Example bootstrap block:
-- "+919876543210": "admin"
-
-## 3. Firestore security rules
-
-In Firebase Console -> Firestore Database -> Rules, paste this and publish:
+Publish these rules in Firebase Console. They allow:
+- admin users to manage users and month visibility
+- a signed-in user to read their own user document
+- the bootstrap admin number to create its first admin document
+- a signed-in user to update only their own login metadata after OTP
 
 ```txt
 rules_version = '2';
@@ -70,20 +60,39 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function currentPhone() {
+      return request.auth.token.phone_number;
+    }
+
     function isOwnPhoneDoc(phone) {
-      return signedIn() && request.auth.token.phone_number == phone;
+      return signedIn() && currentPhone() == phone;
+    }
+
+    function isBootstrapAdmin(phone) {
+      return signedIn() && phone == '+919738772736' && currentPhone() == '+919738772736';
     }
 
     function isAdmin() {
       return signedIn() &&
-        exists(/databases/$(database)/documents/authorizedUsers/$(request.auth.token.phone_number)) &&
-        get(/databases/$(database)/documents/authorizedUsers/$(request.auth.token.phone_number)).data.role == 'admin' &&
-        get(/databases/$(database)/documents/authorizedUsers/$(request.auth.token.phone_number)).data.active != false;
+        exists(/databases/$(database)/documents/authorizedUsers/$(currentPhone())) &&
+        get(/databases/$(database)/documents/authorizedUsers/$(currentPhone())).data.role == 'admin' &&
+        get(/databases/$(database)/documents/authorizedUsers/$(currentPhone())).data.active != false;
+    }
+
+    function ownLoginMetadataOnly() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'lastLoginAt',
+        'lastLoginMethod',
+        'phoneVerifiedAt',
+        'updatedAt'
+      ]);
     }
 
     match /authorizedUsers/{phone} {
       allow read: if isOwnPhoneDoc(phone) || isAdmin();
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin() || isBootstrapAdmin(phone);
+      allow update: if isAdmin() || (isOwnPhoneDoc(phone) && ownLoginMetadataOnly());
+      allow delete: if isAdmin();
     }
 
     match /monthVisibility/{docId} {
@@ -94,103 +103,55 @@ service cloud.firestore {
 }
 ```
 
-This gives:
-- admin can manage users and visibility
-- signed-in users can read visibility
-- a user can read their own role doc
+## How login works
 
-## 4. Deploy
-
-1. Save changes.
-2. Commit and push to main.
-3. Wait for GitHub Pages deploy.
-4. Open the app once and refresh.
-
-## 5. Exact UI steps to use it
-
-### First admin login
+### OTP login
 
 1. Open the app.
-2. OTP popup appears.
-3. Enter the bootstrap admin phone number from js/firebase-config.js.
-4. Tap Send OTP.
-5. Enter the 6-digit code.
-6. Tap Verify OTP.
-7. You enter admin mode.
+2. Choose OTP.
+3. Enter the phone number. `9738772736` is accepted and normalized to `+919738772736`.
+4. Complete the SMS verification.
+5. If the phone is authorized, the app opens and that browser is now registered for PIN unlock.
 
-### Add viewer/admin users from UI
+### PIN login
 
-1. Login as admin.
-2. In the top header, tap the users icon.
-3. Manage Users popup opens.
-4. Enter phone number in format +countrycodephonenumber.
-5. Choose role:
-   - viewer
-   - admin
-6. Tap Save User.
-7. That user can now log in with OTP.
+1. Open the app on a browser that already completed OTP once for the same phone.
+2. Choose PIN.
+3. Enter the PIN.
+4. The app unlocks without another OTP.
 
-### Remove user from UI
+On a new device or browser, PIN does not work until OTP registration is completed there first.
 
-1. Login as admin.
-2. Tap the users icon.
-3. In the users list, tap Remove.
-4. That phone number loses access.
+## Admin user management
 
-### Viewer login
+From the admin users dialog the admin can:
+- add viewer phones with PINs
+- add admin phones with PINs
+- edit usernames, roles, and PINs
+- deactivate users
 
-1. Open app.
-2. Enter allowed viewer phone number.
-3. Tap Send OTP.
-4. Enter SMS OTP.
-5. Tap Verify OTP.
-6. Viewer gets access automatically.
+Rules enforced in the app:
+- every user must have a phone number
+- PIN must be 4 to 6 digits
+- maximum 3 active admins
+- current active admin cannot remove or downgrade their own session mid-login
 
-There is no 7242 PIN flow anymore when Firestore OTP setup is active.
+## Month visibility
 
-## 6. Exact UI steps for enabling/disabling months immediately
+Admin can enable or disable month visibility directly from the month toggle. The change writes to Firestore immediately and shows up for signed-in users without any GitHub token flow.
 
-1. Login as admin.
-2. Open any tab:
-   - Sunday
-   - Tuesday
-   - Special
-   - Fasting
-3. Go to the month.
-4. Use the toggle below the month header:
-   - ON = visible to users
-   - OFF = hidden from users
-5. That change writes to Firestore immediately.
-6. Other signed-in users see it after live refresh / app refresh without any GitHub token.
+## Testing
 
-## 7. Notes on live behavior
+Unit tests for auth helpers are in [tests/auth-utils.test.js](tests/auth-utils.test.js).
 
-- Month visibility no longer depends on GitHub PAT.
-- User access no longer requires editing files for each new user.
-- Firestore is now the live source for:
-  - authorized users
-  - published month visibility
-- Static JSON still remains the source for schedule content itself.
+Run them with:
 
-## 8. Troubleshooting
+```bash
+node --test tests/auth-utils.test.js
+```
 
-### OTP says not authorized
-- Phone number was not added in Manage Users.
-- Or the bootstrap admin/viewer number in js/firebase-config.js is wrong.
+## Notes
 
-### Toggle does not save
-- Firestore is not enabled.
-- Firestore rules were not published.
-- Firebase config values are still placeholders.
-
-### Users icon does not show
-- You are not logged in as admin.
-- The phone number is not stored as role admin.
-
-### First admin cannot log in
-- Put that admin phone in window.authorizedPhoneNumbers inside js/firebase-config.js.
-- Push and refresh once.
-
-## 9. Recommended next improvement
-
-If you want, next I can move the schedule content itself from JSON to Firestore too. Then admin could edit service assignments directly from the UI, not just users and visibility.
+- Static JSON files still provide the schedule content.
+- Firestore now stores user access, PIN metadata, and live visibility state.
+- PIN is a convenience unlock on registered browsers. OTP remains the stronger recovery path and the required first-time registration step.

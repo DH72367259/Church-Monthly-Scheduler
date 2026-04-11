@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function currentPhone() {
+      return request.auth.token.phone_number;
+    }
+
+    function isOwnPhoneDoc(phone) {
+      return signedIn() && currentPhone() == phone;
+    }
+
+    function isBootstrapAdmin(phone) {
+      return signedIn() && phone == '+919738772736' && currentPhone() == '+919738772736';
+    }
+
+    function isAdmin() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/authorizedUsers/$(currentPhone())) &&
+        get(/databases/$(database)/documents/authorizedUsers/$(currentPhone())).data.role == 'admin' &&
+        get(/databases/$(database)/documents/authorizedUsers/$(currentPhone())).data.active != false;
+    }
+
+    function ownLoginMetadataOnly() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'lastLoginAt',
+        'lastLoginMethod',
+        'phoneVerifiedAt',
+        'updatedAt'
+      ]);
+    }
+
+    match /authorizedUsers/{phone} {
+      allow read: if isOwnPhoneDoc(phone) || isAdmin();
+      allow create: if isAdmin() || isBootstrapAdmin(phone);
+      allow update: if isAdmin() || (isOwnPhoneDoc(phone) && ownLoginMetadataOnly());
+      allow delete: if isAdmin();
+    }
+
+    match /monthVisibility/{docId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

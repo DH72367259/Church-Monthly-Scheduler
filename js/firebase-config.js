@@ -13,14 +13,28 @@ window.firebaseConfig = {
   appId: "YOUR_APP_ID_HERE"
 };
 
-/*
- * Bootstrap role-based phone numbers.
- * Keep at least one admin here so first admin can log in before Firestore users are managed from UI.
- */
-window.authorizedPhoneNumbers = {
-  "+911234567890": "viewer",
-  "+919876543210": "admin"
+window.authDefaults = {
+  defaultCountryCode: '91'
 };
+
+/*
+ * Bootstrap users.
+ * Keep at least one admin here so the first admin can sign in and seed Firestore access.
+ */
+window.bootstrapUsers = {
+  "+919738772736": {
+    username: 'Admin',
+    role: 'admin',
+    pinHash: 'cd9a4fc91b183dbbdb323624ad8f1aff1a5ea30fbcc80efceab9176d70645d38',
+    active: true,
+    phoneVerified: true
+  }
+};
+
+window.authorizedPhoneNumbers = Object.keys(window.bootstrapUsers).reduce(function(map, phone) {
+  map[phone] = window.bootstrapUsers[phone].role;
+  return map;
+}, {});
 
 (function initFirebaseOtp() {
   var cfg = window.firebaseConfig || {};
