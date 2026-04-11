@@ -35,7 +35,7 @@
   }
 
   function validatePin(pin) {
-    return /^\d{4,6}$/.test(String(pin || '').trim());
+    return /^\d{6}$/.test(String(pin || '').trim());
   }
 
   function countActiveAdmins(users) {

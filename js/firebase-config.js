@@ -25,8 +25,9 @@ window.bootstrapUsers = {
   "+919738772736": {
     username: 'Admin',
     role: 'admin',
-    pinPlain: '2603',
-    pinHash: 'cd9a4fc91b183dbbdb323624ad8f1aff1a5ea30fbcc80efceab9176d70645d38',
+    pinPlain: '260300',
+    pinHash: '040c64d2b1b90f6fca3a1ba81f5639895e7126279a6c6c0cbeacca74eee652c1',
+    pinMustChange: true,
     active: true
   }
 };

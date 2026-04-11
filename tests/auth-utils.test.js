@@ -13,9 +13,10 @@ test('normalizePhoneNumber rejects invalid values', () => {
   assert.equal(authUtils.normalizePhoneNumber('', '91'), null);
 });
 
-test('validatePin accepts 4 to 6 digits only', () => {
-  assert.equal(authUtils.validatePin('2603'), true);
+test('validatePin accepts exactly 6 digits only', () => {
+  assert.equal(authUtils.validatePin('2603'), false);
   assert.equal(authUtils.validatePin('123456'), true);
+  assert.equal(authUtils.validatePin('1234567'), false);
   assert.equal(authUtils.validatePin('123'), false);
   assert.equal(authUtils.validatePin('12ab'), false);
 });

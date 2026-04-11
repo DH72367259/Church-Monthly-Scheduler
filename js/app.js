@@ -52,7 +52,7 @@ function sanitizeUsername(name, fallback) {
 function isValidPin(pin) {
   return authUtils.validatePin
     ? authUtils.validatePin(pin)
-    : /^\d{4,6}$/.test(String(pin || '').trim());
+    : /^\d{6}$/.test(String(pin || '').trim());
 }
 
 function countActiveAdmins(users) {
@@ -77,6 +77,7 @@ function safeEqual(left, right) {
 /* ── Login state ───────────────────────────────────────────────────────────── */
 let authenticatedPhoneNumber = null;
 let currentUserProfile = null;
+let pendingPinChangeProfile = null;
 let _visibilityUnsub = null;
 let _adminUsersUnsub = null;
 let _adminUsersCache = [];
@@ -86,6 +87,8 @@ const FS_USERS_COLLECTION      = 'authorizedUsers';
 const FS_VISIBILITY_COLLECTION = 'monthVisibility';
 const LOCAL_USERS_KEY          = 'pf_users_local';
 const LOCAL_VISIBILITY_KEY     = 'pf_visibility_local';
+const VIEWER_SESSION_KEY       = 'pf_viewer_session';
+const VIEWER_SESSION_TTL_MS    = 2 * 24 * 60 * 60 * 1000;
 
 /* ── Admin one-session lock (browser-level) ─────────────────────────────── */
 const ADMIN_LOCK_KEY        = 'pf_admin_lock';
@@ -170,6 +173,89 @@ function getLocalVisibilityMap() {
 
 function setLocalVisibilityMap(map) {
   localStorage.setItem(LOCAL_VISIBILITY_KEY, JSON.stringify(map || {}));
+}
+
+function setViewerSession(phoneNumber) {
+  localStorage.setItem(VIEWER_SESSION_KEY, JSON.stringify({
+    phone: phoneNumber,
+    expiresAt: Date.now() + VIEWER_SESSION_TTL_MS
+  }));
+}
+
+function getViewerSession() {
+  try {
+    var raw = localStorage.getItem(VIEWER_SESSION_KEY);
+    if (!raw) return null;
+    var session = JSON.parse(raw);
+    if (!session || !session.phone || !session.expiresAt) return null;
+    if (session.expiresAt <= Date.now()) {
+      localStorage.removeItem(VIEWER_SESSION_KEY);
+      return null;
+    }
+    return session;
+  } catch (err) {
+    return null;
+  }
+}
+
+function clearViewerSession() {
+  localStorage.removeItem(VIEWER_SESSION_KEY);
+}
+
+function isWeakSequencePin(pin) {
+  var asc = '01234567890';
+  var desc = '9876543210';
+  return asc.indexOf(pin) !== -1 || desc.indexOf(pin) !== -1;
+}
+
+function validatePinPolicy(phoneNumber, pin) {
+  var digits = String(phoneNumber || '').replace(/\D/g, '');
+  if (!isValidPin(pin)) {
+    return 'PIN must be exactly 6 digits.';
+  }
+  if (/^(\d)\1{5}$/.test(pin)) {
+    return 'PIN cannot be all same digits.';
+  }
+  if (isWeakSequencePin(pin)) {
+    return 'PIN cannot be a simple sequence.';
+  }
+  if (digits.length >= 6) {
+    var first6 = digits.slice(0, 6);
+    var last6 = digits.slice(-6);
+    if (pin === first6 || pin === last6) {
+      return 'PIN cannot be first or last 6 digits of phone number.';
+    }
+  }
+  return '';
+}
+
+function collectActiveUsersForPinCheck() {
+  var usersByPhone = {};
+  Object.keys(getBootstrapUsers()).forEach(function(phone) {
+    var u = getBootstrapUsers()[phone] || {};
+    if (u.active === false) return;
+    usersByPhone[phone] = Object.assign({}, u, { phone: phone });
+  });
+
+  Object.keys(getLocalUsersMap()).forEach(function(phone) {
+    var u = getLocalUsersMap()[phone] || {};
+    if (u.active === false) return;
+    usersByPhone[phone] = Object.assign({}, usersByPhone[phone] || {}, u, { phone: phone });
+  });
+
+  _adminUsersCache.forEach(function(u) {
+    if (!u || u.active === false) return;
+    usersByPhone[u.phone] = Object.assign({}, usersByPhone[u.phone] || {}, u, { phone: u.phone });
+  });
+
+  return Object.keys(usersByPhone).map(function(phone) { return usersByPhone[phone]; });
+}
+
+function isPinDuplicateForAnotherUser(phoneNumber, pin) {
+  return collectActiveUsersForPinCheck().some(function(user) {
+    if (!user || !user.phone || user.phone === phoneNumber || user.active === false) return false;
+    return user.pinPlain === pin;
+  });
 }
 
 function monthDocId(tab, monthKey) {
@@ -555,11 +641,23 @@ window.saveAuthorizedUser = async function saveAuthorizedUser() {
   }
 
   if (!pin && !(existing && (existing.pinHash || existing.pinPlain))) {
-    errEl.textContent = 'Set a 4 to 6 digit PIN for this user.';
+    errEl.textContent = 'Set an initial 6 digit PIN for this user.';
     return;
   }
+  if (pin) {
+    var policyError = validatePinPolicy(phone, pin);
+    if (policyError) {
+      errEl.textContent = policyError;
+      return;
+    }
+    if (isPinDuplicateForAnotherUser(phone, pin)) {
+      errEl.textContent = 'This PIN is already used by another user. Use a unique PIN.';
+      return;
+    }
+  }
+
   if (pin && !isValidPin(pin)) {
-    errEl.textContent = 'PIN must be 4 to 6 digits.';
+    errEl.textContent = 'PIN must be exactly 6 digits.';
     return;
   }
 
@@ -580,6 +678,7 @@ window.saveAuthorizedUser = async function saveAuthorizedUser() {
     payload.pinPlain = pin;
     payload.pinHash = await hashPin(phone, pin);
     payload.pinVersion = 1;
+    payload.pinMustChange = true;
     payload.pinUpdatedAt = db ? firebase.firestore.FieldValue.serverTimestamp() : Date.now();
   }
 
@@ -715,7 +814,10 @@ async function loadData() {
     refreshAllTabStates();
 
     /* Gate entire app behind login — no data visible without authentication */
-    showOtpModal(() => render());
+    var resumed = await tryResumeViewerSession();
+    if (!resumed) {
+      showOtpModal(() => render());
+    }
   } catch (err) {
     content.innerHTML = `
       <div class="error-card">
@@ -724,6 +826,20 @@ async function loadData() {
         <button class="btn-primary" onclick="location.reload()">Retry</button>
       </div>`;
   }
+}
+
+async function tryResumeViewerSession() {
+  var session = getViewerSession();
+  if (!session) return false;
+
+  var profile = await getUserProfile(session.phone);
+  if (!profile || profile.active === false || profile.role !== 'viewer') {
+    clearViewerSession();
+    return false;
+  }
+
+  await finalizeAuth(profile, 'session');
+  return true;
 }
 
 /** Silently re-fetch JSON data in the background and re-render if anything changed */
@@ -1368,6 +1484,7 @@ async function finalizeAuth(profile, method) {
   currentUserProfile = profile;
 
   if (accessRole === 'admin') {
+    clearViewerSession();
     if (!tryAcquireAdminLock()) {
       accessRole = null;
       authenticatedPhoneNumber = null;
@@ -1398,8 +1515,16 @@ async function finalizeAuth(profile, method) {
     subscribeVisibilityOverrides();
   }
 
-  clearPinAttemptState(profile.phone);
-  await markPinLogin(profile);
+  if (accessRole === 'viewer') {
+    setViewerSession(profile.phone);
+  }
+
+  if (method !== 'session') {
+    clearPinAttemptState(profile.phone);
+    await markPinLogin(profile);
+  }
+
+  pendingPinChangeProfile = null;
 
   syncAdminControls();
   id('otp-modal').classList.add('hidden');
@@ -1417,7 +1542,7 @@ window.loginWithPin = async function loginWithPin() {
     return;
   }
   if (!isValidPin(pin)) {
-    errorEl.textContent = 'PIN must be 4 to 6 digits.';
+    errorEl.textContent = 'PIN must be exactly 6 digits.';
     return;
   }
 
@@ -1455,6 +1580,14 @@ window.loginWithPin = async function loginWithPin() {
       return;
     }
 
+    if (profile.pinMustChange === true) {
+      pendingPinChangeProfile = profile;
+      id('pin-create-phone-input').value = phoneNumber;
+      showPinCreateStep();
+      id('pin-create-error').textContent = 'Create a new 6 digit PIN to continue.';
+      return;
+    }
+
     await finalizeAuth(profile, 'pin');
   } catch (err) {
     console.error('PIN Login Error:', err);
@@ -1474,11 +1607,33 @@ window.saveOwnPin = async function saveOwnPin() {
     return;
   }
   if (!isValidPin(newPin)) {
-    errEl.textContent = 'PIN must be 4 to 6 digits.';
+    errEl.textContent = 'PIN must be exactly 6 digits.';
+    return;
+  }
+  var policyError = validatePinPolicy(phoneNumber, newPin);
+  if (policyError) {
+    errEl.textContent = policyError;
+    return;
+  }
+  if (isPinDuplicateForAnotherUser(phoneNumber, newPin)) {
+    errEl.textContent = 'This PIN is already used by another user. Use a unique PIN.';
     return;
   }
   if (newPin !== confirmPin) {
     errEl.textContent = 'PIN confirmation does not match.';
+    return;
+  }
+
+  var canChange = false;
+  if (pendingPinChangeProfile && pendingPinChangeProfile.phone === phoneNumber) {
+    canChange = true;
+  } else if (accessRole === 'admin') {
+    canChange = true;
+  } else if (accessRole === 'viewer' && authenticatedPhoneNumber === phoneNumber) {
+    canChange = true;
+  }
+  if (!canChange) {
+    errEl.textContent = 'Login with your assigned PIN first, then change it.';
     return;
   }
 
@@ -1497,6 +1652,7 @@ window.saveOwnPin = async function saveOwnPin() {
       pinPlain: newPin,
       pinHash: await hashPin(phoneNumber, newPin),
       pinVersion: 1,
+      pinMustChange: false,
       updatedBy: authenticatedPhoneNumber || phoneNumber
     };
 
@@ -1516,6 +1672,12 @@ window.saveOwnPin = async function saveOwnPin() {
     id('pin-phone-input').value = phoneNumber;
     id('pin-input').value = '';
     showPinLoginStep();
+    if (pendingPinChangeProfile && pendingPinChangeProfile.phone === phoneNumber) {
+      var updatedProfile = Object.assign({}, pendingPinChangeProfile, payload, { phone: phoneNumber });
+      await finalizeAuth(updatedProfile, 'pin');
+      return;
+    }
+
     id('pin-error').textContent = 'PIN saved. You can login now.';
   } catch (err) {
     console.warn('Save own PIN error:', err.message);
@@ -1526,6 +1688,7 @@ window.saveOwnPin = async function saveOwnPin() {
 /** Close modal without authenticating */
 window.cancelOtp = function cancelOtp() {
   id('otp-modal').classList.add('hidden');
+  pendingPinChangeProfile = null;
   _authCallback = null;
   showLockedState();
 };
@@ -1533,6 +1696,8 @@ window.cancelOtp = function cancelOtp() {
 window.logoutCurrentSession = async function logoutCurrentSession() {
   releaseAdminLock();
   stopFirestoreSubscriptions();
+  clearViewerSession();
+  pendingPinChangeProfile = null;
   accessRole = null;
   authenticatedPhoneNumber = null;
   currentUserProfile = null;

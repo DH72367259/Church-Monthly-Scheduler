@@ -7,9 +7,13 @@ This build is PIN-only (OTP login removed).
 ## Login model
 
 - Users login with phone number + PIN.
-- Users can create/change their own PIN from the login modal.
+- Initial PIN is set by admin. On first successful login, user must create a new PIN before app access.
+- Users can change their own PIN after login.
 - Admin can add users with phone number + role + PIN.
 - Admin can view user PIN values in Manage Users.
+- PIN must be exactly 6 digits.
+- PIN cannot be first or last 6 digits of the phone number.
+- PIN cannot be duplicated across users.
 - Maximum 3 active admins.
 
 ## Bootstrap admin
@@ -18,7 +22,7 @@ Configured in [js/firebase-config.js](js/firebase-config.js):
 
 - Username: Admin
 - Phone: 9738772736 (normalized to +919738772736)
-- Initial PIN: 2603
+- Initial PIN: 260300 (must be changed after first login)
 
 ## Firebase setup
 
@@ -49,6 +53,11 @@ From Manage Users:
 - Set/reset PIN
 - Remove users (deactivate)
 - View PIN value per user
+
+## Session behavior
+
+- Viewer session is remembered for 2 days on that browser/home-screen app.
+- Admin login is always required each time (no auto-resume).
 
 ## Testing
 
