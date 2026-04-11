@@ -2185,6 +2185,10 @@ window.downloadSchedule = function downloadSchedule() {
     + '.service-block{margin-bottom:28px;}'
     + '.service-block h3{font-size:15px;margin:0 0 8px;padding:6px 10px;background:#f3f4f6;border-left:4px solid #1a56db;}'
     + '.ev-date{margin:0 0 8px;font-size:13px;color:#666;}'
+    + '.print-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:0 auto 24px;}'
+    + '.print-action-btn{padding:10px 20px;font-size:15px;border:none;border-radius:8px;cursor:pointer;}'
+    + '.print-btn-primary{background:#1a56db;color:#fff;}'
+    + '.print-btn-secondary{background:#e5e7eb;color:#111827;}'
     + 'table{width:100%;border-collapse:collapse;font-size:13px;}'
     + 'th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;}'
     + 'th{background:#e5e7eb;font-weight:600;}'
@@ -2202,7 +2206,10 @@ window.downloadSchedule = function downloadSchedule() {
     + '<h1>Peter Foundation</h1>'
     + '<h2>' + htmlEsc(tabLabel) + ' &mdash; ' + htmlEsc(monthTitle) + '</h2>'
     + '</div>'
-    + '<button class="no-print" onclick="window.print()" style="display:block;margin:0 auto 24px;padding:10px 28px;font-size:15px;background:#1a56db;color:#fff;border:none;border-radius:8px;cursor:pointer;">&#128438; Print / Save as PDF</button>'
+    + '<div class="print-actions no-print">'
+    + '<button class="print-action-btn print-btn-primary" onclick="window.print()">&#128438; Print / Save as PDF</button>'
+    + '<button class="print-action-btn print-btn-secondary" onclick="window.close()">Close</button>'
+    + '</div>'
     + bodyHTML
     + '<div class="footer">Peter Foundation Event Details &mdash; printed '
     + new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
@@ -2216,6 +2223,7 @@ window.downloadSchedule = function downloadSchedule() {
   }
   win.document.write(html);
   win.document.close();
+  win.focus();
 };
 
 /** HTML-escape helper used in print page generation */
