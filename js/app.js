@@ -1034,9 +1034,12 @@ function syncAdminControls() {
     logoutBtn.className = 'logout-btn';
     logoutBtn.id = 'logout-btn';
     logoutBtn.setAttribute('aria-label', 'Log out');
+    logoutBtn.setAttribute('title', 'Log out');
     logoutBtn.innerHTML = '&#10162;';
     logoutBtn.onclick = window.logoutCurrentSession;
     header.appendChild(logoutBtn);
+  } else if (logoutBtn) {
+    logoutBtn.setAttribute('title', 'Log out');
   }
 
   if (accessRole !== 'admin') return;
@@ -1046,9 +1049,12 @@ function syncAdminControls() {
     usersBtn.className = 'admin-users-btn';
     usersBtn.id = 'admin-users-btn';
     usersBtn.setAttribute('aria-label', 'Manage users');
+    usersBtn.setAttribute('title', 'Manage users');
     usersBtn.innerHTML = '&#128101;';
     usersBtn.onclick = window.openAdminUsersModal;
     header.appendChild(usersBtn);
+  } else {
+    usersBtn.setAttribute('title', 'Manage users');
   }
 
   if (!dlBtn) {
@@ -1056,12 +1062,14 @@ function syncAdminControls() {
     dlBtn.className = 'download-btn admin-visible';
     dlBtn.id = 'download-btn';
     dlBtn.setAttribute('aria-label', 'Download / Print');
+    dlBtn.setAttribute('title', 'Download or print');
     dlBtn.innerHTML = '&#8597;';
     dlBtn.onclick = window.downloadSchedule;
     header.appendChild(dlBtn);
     return;
   }
 
+  dlBtn.setAttribute('title', 'Download or print');
   usersBtn.classList.add('admin-visible');
   dlBtn.classList.add('admin-visible');
 }
@@ -1727,7 +1735,6 @@ window.logoutCurrentSession = async function logoutCurrentSession() {
   currentUserProfile = null;
   syncAdminControls();
   showLockedState();
-  showOtpModal(() => render());
 };
 
 /* ── Refresh app ────────────────────────────────────────────────── */

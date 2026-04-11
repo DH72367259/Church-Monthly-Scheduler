@@ -30,12 +30,12 @@
 
     <!-- ── Header ───────────────────────────────────────────────────── -->
     <header class="app-header">
-      <button class="hamburger-btn" id="menu-btn" aria-label="Open menu" onclick="openMenu()">&#9776;</button>
+      <button class="hamburger-btn" id="menu-btn" aria-label="Open menu" title="Open menu" onclick="openMenu()">&#9776;</button>
       <div class="header-text">
         <h1 class="app-title">Peter Foundation</h1>
         <p class="app-subtitle" id="header-tab-label">Sunday Services</p>
       </div>
-      <button class="refresh-btn" id="refresh-btn" aria-label="Refresh" onclick="refreshApp()">&#8635;</button>
+      <button class="refresh-btn" id="refresh-btn" aria-label="Refresh" title="Refresh schedule" onclick="refreshApp()">&#8635;</button>
     </header>
 
     <!-- ── Side drawer ──────────────────────────────────────────────── -->
@@ -43,7 +43,7 @@
     <nav class="drawer" id="drawer" aria-label="Navigation menu">
       <div class="drawer-header">
         <span class="drawer-title">Menu</span>
-        <button class="drawer-close" onclick="closeMenu()" aria-label="Close menu">&#10005;</button>
+        <button class="drawer-close" onclick="closeMenu()" aria-label="Close menu" title="Close menu">&#10005;</button>
       </div>
       <button class="drawer-item active" id="drawer-sunday"  onclick="selectTab('sunday')">
         &#9788;&nbsp; Sunday Services
