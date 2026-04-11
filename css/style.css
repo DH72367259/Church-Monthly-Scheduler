@@ -1024,6 +1024,20 @@ body {
   overflow-y: auto;
 }
 
+.admin-close-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: 12px;
+  background: #f3f4f6;
+  color: var(--gray-700);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .admin-user-row {
   display: flex;
   align-items: center;
