@@ -85,8 +85,10 @@ let _adminUsersCache = [];
 /* ── Firestore collections ──────────────────────────────────────────────── */
 const FS_USERS_COLLECTION      = 'authorizedUsers';
 const FS_VISIBILITY_COLLECTION = 'monthVisibility';
+const FS_SCHEDULE_COLLECTION   = 'scheduleSnapshots';
 const LOCAL_USERS_KEY          = 'pf_users_local';
 const LOCAL_VISIBILITY_KEY     = 'pf_visibility_local';
+const LOCAL_SCHEDULE_KEY       = 'pf_schedule_local';
 const VIEWER_SESSION_KEY       = 'pf_viewer_session';
 const VIEWER_SESSION_TTL_MS    = 2 * 24 * 60 * 60 * 1000;
 const SELF_PIN_CHANGE_LIMIT    = 2;
@@ -174,6 +176,143 @@ function getLocalVisibilityMap() {
 
 function setLocalVisibilityMap(map) {
   localStorage.setItem(LOCAL_VISIBILITY_KEY, JSON.stringify(map || {}));
+}
+
+function getLocalScheduleMap() {
+  try {
+    var raw = localStorage.getItem(LOCAL_SCHEDULE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function setLocalScheduleMap(map) {
+  localStorage.setItem(LOCAL_SCHEDULE_KEY, JSON.stringify(map || {}));
+}
+
+function emptyScheduleBuckets() {
+  return {
+    sunday: {},
+    tuesday: {},
+    special: {},
+    fasting: {}
+  };
+}
+
+function normalizeScheduleBuckets(store) {
+  var buckets = emptyScheduleBuckets();
+  Object.keys(store || {}).forEach(function(docId) {
+    var entry = store[docId] || {};
+    if (!entry.tab || !buckets[entry.tab] || !entry.monthKey) return;
+    buckets[entry.tab][entry.monthKey] = Object.assign({}, buckets[entry.tab][entry.monthKey] || {}, entry);
+  });
+  return buckets;
+}
+
+async function loadPersistedScheduleBuckets() {
+  var buckets = normalizeScheduleBuckets(getLocalScheduleMap());
+  var db = getDb();
+  if (!db) return buckets;
+
+  try {
+    var snapshot = await db.collection(FS_SCHEDULE_COLLECTION).get();
+    snapshot.forEach(function(doc) {
+      var entry = doc.data() || {};
+      if (!entry.tab || !buckets[entry.tab] || !entry.monthKey) return;
+      buckets[entry.tab][entry.monthKey] = Object.assign({}, buckets[entry.tab][entry.monthKey] || {}, entry);
+    });
+  } catch (err) {
+    console.warn('Schedule backup lookup failed:', err.message);
+  }
+
+  return buckets;
+}
+
+function mergeScheduleArray(tab, baseArr, persistedBuckets) {
+  var monthMap = Object.assign({}, (persistedBuckets && persistedBuckets[tab]) || {});
+
+  (baseArr || []).forEach(function(month) {
+    if (!month || !month.monthKey) return;
+    monthMap[month.monthKey] = Object.assign({}, monthMap[month.monthKey] || {}, month);
+  });
+
+  return Object.keys(monthMap).sort().map(function(monthKey) {
+    return Object.assign({}, monthMap[monthKey], { monthKey: monthKey });
+  });
+}
+
+function sanitizeScheduleMonthForStorage(month) {
+  var clean = Object.assign({}, month || {});
+  delete clean.basePublished;
+  return clean;
+}
+
+async function persistScheduleSnapshots(scheduleByTab) {
+  var localMap = getLocalScheduleMap();
+  ['sunday', 'tuesday', 'special', 'fasting'].forEach(function(tab) {
+    (scheduleByTab[tab] || []).forEach(function(month) {
+      if (!month || !month.monthKey) return;
+      var payload = Object.assign({}, sanitizeScheduleMonthForStorage(month), {
+        tab: tab,
+        monthKey: month.monthKey,
+        updatedAt: Date.now(),
+        updatedBy: authenticatedPhoneNumber || null
+      });
+      localMap[monthDocId(tab, month.monthKey)] = payload;
+    });
+  });
+  setLocalScheduleMap(localMap);
+
+  var db = getDb();
+  if (!db) return;
+
+  try {
+    var writes = [];
+    ['sunday', 'tuesday', 'special', 'fasting'].forEach(function(tab) {
+      (scheduleByTab[tab] || []).forEach(function(month) {
+        if (!month || !month.monthKey) return;
+        writes.push(db.collection(FS_SCHEDULE_COLLECTION).doc(monthDocId(tab, month.monthKey)).set(Object.assign({}, sanitizeScheduleMonthForStorage(month), {
+          tab: tab,
+          monthKey: month.monthKey,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedBy: authenticatedPhoneNumber || null
+        }), { merge: true }));
+      });
+    });
+    await Promise.all(writes);
+  } catch (err) {
+    console.warn('Schedule backup save failed:', err.message);
+  }
+}
+
+async function fetchBaseScheduleData() {
+  const ts = '?t=' + Date.now();
+  const [sr, tr, xr, fr] = await Promise.all([
+    fetch('./data/sunday-schedule.json' + ts),
+    fetch('./data/tuesday-prayer.json'  + ts),
+    fetch('./data/special-days.json'    + ts),
+    fetch('./data/fasting-prayer.json'  + ts)
+  ]);
+  if (!sr.ok) throw new Error('sunday-schedule.json not found');
+  if (!tr.ok) throw new Error('tuesday-prayer.json not found');
+
+  return {
+    sunday: await sr.json(),
+    tuesday: await tr.json(),
+    special: xr.ok ? await xr.json() : [],
+    fasting: fr.ok ? await fr.json() : []
+  };
+}
+
+async function resolveScheduleData(baseData) {
+  var persistedBuckets = await loadPersistedScheduleBuckets();
+  return {
+    sunday: mergeScheduleArray('sunday', baseData.sunday, persistedBuckets),
+    tuesday: mergeScheduleArray('tuesday', baseData.tuesday, persistedBuckets),
+    special: mergeScheduleArray('special', baseData.special, persistedBuckets),
+    fasting: mergeScheduleArray('fasting', baseData.fasting, persistedBuckets)
+  };
 }
 
 function setViewerSession(phoneNumber) {
@@ -785,34 +924,23 @@ function registerSW() {
 async function loadData() {
   const content = id('content');
   try {
-    /* Cache-bust with a timestamp so admins' Git pushes are visible immediately */
-    const ts = '?t=' + Date.now();
-    const [sr, tr, xr, fr] = await Promise.all([
-      fetch('./data/sunday-schedule.json' + ts),
-      fetch('./data/tuesday-prayer.json'  + ts),
-      fetch('./data/special-days.json'    + ts),
-      fetch('./data/fasting-prayer.json'  + ts)
-    ]);
-    if (!sr.ok) throw new Error('sunday-schedule.json not found');
-    if (!tr.ok) throw new Error('tuesday-prayer.json not found');
-
-    state.sundayData  = await sr.json();
-    state.tuesdayData = await tr.json();
-
-    /* Special days — gracefully optional */
-    if (xr.ok) {
-      state.specialData = await xr.json();
-    }
-
-    /* Fasting prayer — gracefully optional */
-    if (fr.ok) {
-      state.fastingData = await fr.json();
-    }
+    var mergedData = await resolveScheduleData(await fetchBaseScheduleData());
+    state.sundayData  = mergedData.sunday;
+    state.tuesdayData = mergedData.tuesday;
+    state.specialData = mergedData.special;
+    state.fastingData = mergedData.fasting;
 
     markBasePublished(state.sundayData);
     markBasePublished(state.tuesdayData);
     markBasePublished(state.specialData);
     markBasePublished(state.fastingData);
+
+    persistScheduleSnapshots({
+      sunday: state.sundayData,
+      tuesday: state.tuesdayData,
+      special: state.specialData,
+      fasting: state.fastingData
+    });
 
     /* Default each tab to the first non-past month (current month), fall back to last */
     const _si  = state.sundayData.findIndex(function(m){ return !isPastMonth(m.monthKey); });
@@ -864,23 +992,30 @@ async function tryResumeViewerSession() {
 /** Silently re-fetch JSON data in the background and re-render if anything changed */
 async function refreshData(forceRender) {
   try {
-    const ts = '?t=' + Date.now();
-    const [sr, tr, xr, fr] = await Promise.all([
-      fetch('./data/sunday-schedule.json' + ts),
-      fetch('./data/tuesday-prayer.json'  + ts),
-      fetch('./data/special-days.json'    + ts),
-      fetch('./data/fasting-prayer.json'  + ts)
-    ]);
-    if (!sr.ok || !tr.ok) return; /* silently skip on network error */
-    const newSunday  = await sr.json();
-    const newTuesday = await tr.json();
-    const newSpecial = xr.ok ? await xr.json() : state.specialData;
-    const newFasting = fr.ok ? await fr.json() : state.fastingData;
+    var baseData = await fetchBaseScheduleData();
+    if (!baseData.sunday.length || !baseData.tuesday.length) return;
+    const resolvedData = await resolveScheduleData({
+      sunday: baseData.sunday,
+      tuesday: baseData.tuesday,
+      special: baseData.special.length ? baseData.special : state.specialData,
+      fasting: baseData.fasting.length ? baseData.fasting : state.fastingData
+    });
+    const newSunday  = resolvedData.sunday;
+    const newTuesday = resolvedData.tuesday;
+    const newSpecial = resolvedData.special;
+    const newFasting = resolvedData.fasting;
 
     markBasePublished(newSunday);
     markBasePublished(newTuesday);
     markBasePublished(newSpecial);
     markBasePublished(newFasting);
+
+    persistScheduleSnapshots({
+      sunday: newSunday,
+      tuesday: newTuesday,
+      special: newSpecial,
+      fasting: newFasting
+    });
 
     const changed = JSON.stringify(newSunday)  !== JSON.stringify(state.sundayData)  ||
                     JSON.stringify(newTuesday) !== JSON.stringify(state.tuesdayData) ||
