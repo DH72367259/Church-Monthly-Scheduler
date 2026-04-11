@@ -2193,7 +2193,7 @@ window.downloadSchedule = function downloadSchedule() {
     + 'th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word;}'
     + 'th{background:#e5e7eb;font-weight:700;}'
     + '.role-col{width:170px;font-weight:700;background:#f9fafb;}'
-    + '.merged-cell{vertical-align:middle!important;text-align:center;background:#eef2ff;font-weight:700;white-space:normal;overflow-wrap:anywhere;word-break:break-word;}'
+    + '.merged-cell{vertical-align:top!important;text-align:left;background:#eef2ff;font-weight:700;white-space:normal;overflow-wrap:anywhere;word-break:break-word;}'
     + '.sp-label{font-weight:700;width:130px;background:#f9fafb;}'
     + '.empty{color:#aaa;text-align:center;}'
     + '@media print{'
