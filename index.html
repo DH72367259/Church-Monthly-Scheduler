@@ -142,6 +142,7 @@
       <div class="admin-tabs" role="tablist" aria-label="User management tabs">
         <button class="admin-tab-btn active" id="admin-tab-add" onclick="setAdminUsersTab('add')" role="tab" aria-selected="true">Add / Edit User</button>
         <button class="admin-tab-btn" id="admin-tab-list" onclick="setAdminUsersTab('list')" role="tab" aria-selected="false">Existing Users</button>
+        <button class="admin-tab-btn" id="admin-tab-backup" onclick="setAdminUsersTab('backup')" role="tab" aria-selected="false">Backup &amp; Restore</button>
       </div>
 
       <div class="admin-tab-panel" id="admin-panel-add">
@@ -161,6 +162,16 @@
 
       <div class="admin-tab-panel hidden" id="admin-panel-list">
         <div class="admin-users-list" id="admin-users-list"></div>
+      </div>
+
+      <div class="admin-tab-panel hidden" id="admin-panel-backup">
+        <div class="backup-panel">
+          <p class="auth-device-note">Export a full schedule backup before major changes. Restore merges imported months and publish settings without deleting current data.</p>
+          <button class="otp-submit" onclick="exportScheduleBackup()">Download Full Backup</button>
+          <button class="admin-close-btn backup-secondary-btn" onclick="triggerScheduleRestore()">Restore From Backup File</button>
+          <input id="schedule-backup-file" type="file" accept="application/json,.json" class="hidden-file-input" onchange="restoreScheduleBackup(event)" />
+          <p class="otp-error backup-status" id="schedule-backup-status" aria-live="polite"></p>
+        </div>
       </div>
 
       <button class="admin-close-btn" onclick="closeAdminUsersModal()">Close</button>

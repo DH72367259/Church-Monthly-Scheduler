@@ -1018,7 +1018,7 @@ body {
 
 .admin-tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-bottom: 12px;
 }
@@ -1042,6 +1042,24 @@ body {
 
 .admin-tab-panel.hidden {
   display: none;
+}
+
+.backup-panel {
+  padding: 4px 0 2px;
+}
+
+.backup-secondary-btn {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.backup-status {
+  min-height: 18px;
+  margin-bottom: 0;
 }
 
 .admin-users-list {

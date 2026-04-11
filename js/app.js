@@ -178,6 +178,26 @@ function setLocalVisibilityMap(map) {
   localStorage.setItem(LOCAL_VISIBILITY_KEY, JSON.stringify(map || {}));
 }
 
+async function persistVisibilityMap(visibilityMap) {
+  var merged = Object.assign({}, getLocalVisibilityMap(), visibilityMap || {});
+  setLocalVisibilityMap(merged);
+
+  var db = getDb();
+  if (!db) return;
+
+  try {
+    await Promise.all(Object.keys(visibilityMap || {}).map(function(docId) {
+      var entry = Object.assign({}, visibilityMap[docId] || {}, {
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: authenticatedPhoneNumber || null
+      });
+      return db.collection(FS_VISIBILITY_COLLECTION).doc(docId).set(entry, { merge: true });
+    }));
+  } catch (err) {
+    console.warn('Visibility backup save failed:', err.message);
+  }
+}
+
 function getLocalScheduleMap() {
   try {
     var raw = localStorage.getItem(LOCAL_SCHEDULE_KEY);
@@ -246,6 +266,57 @@ function sanitizeScheduleMonthForStorage(month) {
   var clean = Object.assign({}, month || {});
   delete clean.basePublished;
   return clean;
+}
+
+function buildVisibilitySnapshot() {
+  var visibility = {};
+  [['sunday', state.sundayData], ['tuesday', state.tuesdayData], ['special', state.specialData], ['fasting', state.fastingData]].forEach(function(entry) {
+    var tab = entry[0];
+    var arr = entry[1] || [];
+    arr.forEach(function(month) {
+      if (!month || !month.monthKey) return;
+      visibility[monthDocId(tab, month.monthKey)] = {
+        tab: tab,
+        monthKey: month.monthKey,
+        published: month.published !== false,
+        updatedAt: Date.now(),
+        updatedBy: authenticatedPhoneNumber || null
+      };
+    });
+  });
+  return visibility;
+}
+
+function buildScheduleBackupPayload() {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    exportedBy: authenticatedPhoneNumber || null,
+    schedule: {
+      sunday: state.sundayData.map(sanitizeScheduleMonthForStorage),
+      tuesday: state.tuesdayData.map(sanitizeScheduleMonthForStorage),
+      special: state.specialData.map(sanitizeScheduleMonthForStorage),
+      fasting: state.fastingData.map(sanitizeScheduleMonthForStorage)
+    },
+    visibility: buildVisibilitySnapshot()
+  };
+}
+
+function normalizeBackupSchedule(payload) {
+  var schedule = (payload && payload.schedule && typeof payload.schedule === 'object') ? payload.schedule : {};
+  return {
+    sunday: Array.isArray(schedule.sunday) ? schedule.sunday : [],
+    tuesday: Array.isArray(schedule.tuesday) ? schedule.tuesday : [],
+    special: Array.isArray(schedule.special) ? schedule.special : [],
+    fasting: Array.isArray(schedule.fasting) ? schedule.fasting : []
+  };
+}
+
+function setScheduleBackupStatus(message, isError) {
+  var statusEl = id('schedule-backup-status');
+  if (!statusEl) return;
+  statusEl.textContent = message || '';
+  statusEl.style.color = isError ? '#dc2626' : '#065f46';
 }
 
 async function persistScheduleSnapshots(scheduleByTab) {
@@ -729,6 +800,7 @@ window.openAdminUsersModal = function openAdminUsersModal() {
   id('admin-users-modal').classList.remove('hidden');
   setAdminUsersTab('add');
   id('admin-user-error').textContent = '';
+  setScheduleBackupStatus('', false);
   id('admin-user-name').value = '';
   id('admin-user-phone').value = '';
   id('admin-user-role').value = 'viewer';
@@ -737,24 +809,81 @@ window.openAdminUsersModal = function openAdminUsersModal() {
 };
 
 window.setAdminUsersTab = function setAdminUsersTab(tab) {
-  var addTab = id('admin-tab-add');
-  var listTab = id('admin-tab-list');
-  var addPanel = id('admin-panel-add');
-  var listPanel = id('admin-panel-list');
-  if (!addTab || !listTab || !addPanel || !listPanel) return;
-
-  var showAdd = (tab !== 'list');
-  addTab.classList.toggle('active', showAdd);
-  listTab.classList.toggle('active', !showAdd);
-  addTab.setAttribute('aria-selected', showAdd ? 'true' : 'false');
-  listTab.setAttribute('aria-selected', showAdd ? 'false' : 'true');
-  addPanel.classList.toggle('hidden', !showAdd);
-  listPanel.classList.toggle('hidden', showAdd);
+  ['add', 'list', 'backup'].forEach(function(key) {
+    var tabEl = id('admin-tab-' + key);
+    var panelEl = id('admin-panel-' + key);
+    var active = key === tab;
+    if (tabEl) {
+      tabEl.classList.toggle('active', active);
+      tabEl.setAttribute('aria-selected', active ? 'true' : 'false');
+    }
+    if (panelEl) {
+      panelEl.classList.toggle('hidden', !active);
+    }
+  });
 };
 
 window.closeAdminUsersModal = function closeAdminUsersModal() {
   id('admin-users-modal').classList.add('hidden');
   id('admin-user-error').textContent = '';
+  setScheduleBackupStatus('', false);
+};
+
+window.exportScheduleBackup = function exportScheduleBackup() {
+  if (accessRole !== 'admin') return;
+  var payload = buildScheduleBackupPayload();
+  var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  var link = document.createElement('a');
+  var stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'pf-schedule-backup-' + stamp + '.json';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(function() { URL.revokeObjectURL(link.href); }, 1000);
+  setScheduleBackupStatus('Backup downloaded successfully.', false);
+};
+
+window.triggerScheduleRestore = function triggerScheduleRestore() {
+  if (accessRole !== 'admin') return;
+  var fileInput = id('schedule-backup-file');
+  if (!fileInput) return;
+  fileInput.value = '';
+  fileInput.click();
+};
+
+window.restoreScheduleBackup = function restoreScheduleBackup(event) {
+  if (accessRole !== 'admin') return;
+  var file = event && event.target && event.target.files ? event.target.files[0] : null;
+  if (!file) return;
+
+  var reader = new FileReader();
+  reader.onload = async function(loadEvent) {
+    try {
+      var payload = JSON.parse(String(loadEvent.target && loadEvent.target.result || '{}'));
+      if (!payload || payload.version !== 1) {
+        throw new Error('Unsupported backup file format.');
+      }
+
+      var schedule = normalizeBackupSchedule(payload);
+      var totalMonths = schedule.sunday.length + schedule.tuesday.length + schedule.special.length + schedule.fasting.length;
+      if (!totalMonths) {
+        throw new Error('Backup file does not contain any schedule data.');
+      }
+
+      await persistScheduleSnapshots(schedule);
+      await persistVisibilityMap((payload.visibility && typeof payload.visibility === 'object') ? payload.visibility : {});
+      await refreshData(true);
+      setScheduleBackupStatus('Backup restored successfully. Imported data was merged with current schedule.', false);
+    } catch (err) {
+      console.warn('Schedule backup restore error:', err.message);
+      setScheduleBackupStatus(err.message || 'Could not restore backup file.', true);
+    }
+  };
+  reader.onerror = function() {
+    setScheduleBackupStatus('Could not read backup file.', true);
+  };
+  reader.readAsText(file);
 };
 
 window.prefillAuthorizedUser = function prefillAuthorizedUser(phone, role, username) {

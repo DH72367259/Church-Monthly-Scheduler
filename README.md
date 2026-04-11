@@ -53,6 +53,15 @@ From Manage Users:
 - Set/reset PIN
 - Remove users (deactivate)
 - View PIN value per user
+- Download a full schedule backup JSON
+- Restore a backup JSON with merge-safe recovery of prior months and publish settings
+
+## Schedule durability
+
+- Schedule data is merged with stored backup snapshots on load so older months are not dropped by later code updates.
+- Backup snapshots are kept in Firestore when available, with local browser storage as fallback.
+- Admin can open Manage Users -> Backup & Restore to download a full backup before major edits or imports.
+- Restore is merge-safe: imported months and visibility settings are added back without deleting current schedule data.
 
 ## Session behavior
 
