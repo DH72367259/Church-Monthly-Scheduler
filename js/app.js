@@ -1015,9 +1015,23 @@ function isPublishedFor(m) {
 
 /** Keep admin-only controls hidden for non-admin roles */
 function syncAdminControls() {
+  var menuBtn = id('menu-btn');
   var dlBtn = id('download-btn');
   var usersBtn = id('admin-users-btn');
   var logoutBtn = id('logout-btn');
+
+  if (menuBtn) {
+    if (accessRole === 'admin') {
+      menuBtn.style.display = '';
+      menuBtn.disabled = false;
+      menuBtn.setAttribute('title', 'Open menu');
+    } else {
+      menuBtn.style.display = 'none';
+      menuBtn.disabled = true;
+      closeMenu();
+    }
+  }
+
   if (!accessRole) {
     if (logoutBtn) logoutBtn.remove();
   }
@@ -1568,8 +1582,8 @@ window.loginWithPin = async function loginWithPin() {
     errorEl.textContent = 'Enter a valid phone number.';
     return;
   }
-  if (!isValidPin(pin)) {
-    errorEl.textContent = 'PIN must be exactly 6 digits.';
+  if (!/^\d{4,6}$/.test(pin)) {
+    errorEl.textContent = 'PIN must be numeric.';
     return;
   }
 
@@ -1590,6 +1604,9 @@ window.loginWithPin = async function loginWithPin() {
       return;
     }
 
+    var legacyFourDigit = /^\d{4}$/.test(pin);
+    var strictSixDigit = /^\d{6}$/.test(pin);
+
     var pinMatched = false;
     if (profile.pinPlain && safeEqual(pin, profile.pinPlain)) {
       pinMatched = true;
@@ -1604,6 +1621,14 @@ window.loginWithPin = async function loginWithPin() {
         : 'Incorrect PIN. Try again.';
       id('pin-input').value = '';
       id('pin-input').focus();
+      return;
+    }
+
+    if (legacyFourDigit && !strictSixDigit) {
+      pendingPinChangeProfile = profile;
+      id('pin-create-phone-input').value = phoneNumber;
+      showPinCreateStep();
+      id('pin-create-error').textContent = 'Your old PIN is accepted one last time. Set a new 6 digit PIN to continue.';
       return;
     }
 
