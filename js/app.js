@@ -89,6 +89,7 @@ const LOCAL_USERS_KEY          = 'pf_users_local';
 const LOCAL_VISIBILITY_KEY     = 'pf_visibility_local';
 const VIEWER_SESSION_KEY       = 'pf_viewer_session';
 const VIEWER_SESSION_TTL_MS    = 2 * 24 * 60 * 60 * 1000;
+const SELF_PIN_CHANGE_LIMIT    = 2;
 
 /* ── Admin one-session lock (browser-level) ─────────────────────────────── */
 const ADMIN_LOCK_KEY        = 'pf_admin_lock';
@@ -1624,14 +1625,10 @@ window.saveOwnPin = async function saveOwnPin() {
     return;
   }
 
-  var canChange = false;
-  if (pendingPinChangeProfile && pendingPinChangeProfile.phone === phoneNumber) {
-    canChange = true;
-  } else if (accessRole === 'admin') {
-    canChange = true;
-  } else if (accessRole === 'viewer' && authenticatedPhoneNumber === phoneNumber) {
-    canChange = true;
-  }
+  var forcedFirstLoginChange = !!(pendingPinChangeProfile && pendingPinChangeProfile.phone === phoneNumber);
+  var adminOverrideChange = (accessRole === 'admin');
+  var selfAfterLoginChange = (accessRole === 'viewer' && authenticatedPhoneNumber === phoneNumber);
+  var canChange = forcedFirstLoginChange || adminOverrideChange || selfAfterLoginChange;
   if (!canChange) {
     errEl.textContent = 'Login with your assigned PIN first, then change it.';
     return;
@@ -1644,6 +1641,14 @@ window.saveOwnPin = async function saveOwnPin() {
       return;
     }
 
+    var existingSelfChanges = Number(profile.selfPinChangeCount || 0);
+    if (selfAfterLoginChange && existingSelfChanges >= SELF_PIN_CHANGE_LIMIT) {
+      errEl.textContent = 'You have reached your PIN change limit. Contact admin for reset.';
+      return;
+    }
+
+    var nextSelfChangeCount = existingSelfChanges + (selfAfterLoginChange ? 1 : 0);
+
     var payload = {
       phone: phoneNumber,
       username: sanitizeUsername(profile.username, profile.role === 'admin' ? 'Admin' : 'User'),
@@ -1653,6 +1658,7 @@ window.saveOwnPin = async function saveOwnPin() {
       pinHash: await hashPin(phoneNumber, newPin),
       pinVersion: 1,
       pinMustChange: false,
+      selfPinChangeCount: nextSelfChangeCount,
       updatedBy: authenticatedPhoneNumber || phoneNumber
     };
 
