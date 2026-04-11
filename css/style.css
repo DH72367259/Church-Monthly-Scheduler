@@ -1016,6 +1016,34 @@ body {
   margin-bottom: 14px;
 }
 
+.admin-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.admin-tab-btn {
+  border: 1px solid var(--gray-200);
+  background: #f8fafc;
+  color: var(--gray-700);
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-tab-btn.active {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.admin-tab-panel.hidden {
+  display: none;
+}
+
 .admin-users-list {
   display: flex;
   flex-direction: column;

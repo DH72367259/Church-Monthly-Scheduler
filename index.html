@@ -139,7 +139,13 @@
       </div>
       <p class="modal-desc">Add viewer/admin phone numbers and update access immediately.</p>
 
-      <div class="admin-user-form">
+      <div class="admin-tabs" role="tablist" aria-label="User management tabs">
+        <button class="admin-tab-btn active" id="admin-tab-add" onclick="setAdminUsersTab('add')" role="tab" aria-selected="true">Add / Edit User</button>
+        <button class="admin-tab-btn" id="admin-tab-list" onclick="setAdminUsersTab('list')" role="tab" aria-selected="false">Existing Users</button>
+      </div>
+
+      <div class="admin-tab-panel" id="admin-panel-add">
+        <div class="admin-user-form">
         <input class="otp-input" id="admin-user-name" type="text" placeholder="Username" aria-label="Username" />
         <input class="otp-input" id="admin-user-phone" type="tel" placeholder="Enter phone number" aria-label="Phone number" />
         <select id="admin-user-role" class="picker-select">
@@ -150,9 +156,13 @@
         <p class="auth-device-note compact">PIN is visible to admin by request. Maximum 3 active admins.</p>
         <button class="otp-submit" onclick="saveAuthorizedUser()">Save User</button>
         <p class="otp-error" id="admin-user-error" aria-live="polite"></p>
+        </div>
       </div>
 
-      <div class="admin-users-list" id="admin-users-list"></div>
+      <div class="admin-tab-panel hidden" id="admin-panel-list">
+        <div class="admin-users-list" id="admin-users-list"></div>
+      </div>
+
       <button class="admin-close-btn" onclick="closeAdminUsersModal()">Close</button>
     </div>
   </div>

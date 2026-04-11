@@ -588,12 +588,29 @@ function releaseAdminLock() {
 window.openAdminUsersModal = function openAdminUsersModal() {
   if (accessRole !== 'admin') return;
   id('admin-users-modal').classList.remove('hidden');
+  setAdminUsersTab('add');
   id('admin-user-error').textContent = '';
   id('admin-user-name').value = '';
   id('admin-user-phone').value = '';
   id('admin-user-role').value = 'viewer';
   id('admin-user-pin').value = '';
   subscribeAdminUsers();
+};
+
+window.setAdminUsersTab = function setAdminUsersTab(tab) {
+  var addTab = id('admin-tab-add');
+  var listTab = id('admin-tab-list');
+  var addPanel = id('admin-panel-add');
+  var listPanel = id('admin-panel-list');
+  if (!addTab || !listTab || !addPanel || !listPanel) return;
+
+  var showAdd = (tab !== 'list');
+  addTab.classList.toggle('active', showAdd);
+  listTab.classList.toggle('active', !showAdd);
+  addTab.setAttribute('aria-selected', showAdd ? 'true' : 'false');
+  listTab.setAttribute('aria-selected', showAdd ? 'false' : 'true');
+  addPanel.classList.toggle('hidden', !showAdd);
+  listPanel.classList.toggle('hidden', showAdd);
 };
 
 window.closeAdminUsersModal = function closeAdminUsersModal() {
@@ -603,6 +620,7 @@ window.closeAdminUsersModal = function closeAdminUsersModal() {
 
 window.prefillAuthorizedUser = function prefillAuthorizedUser(phone, role, username) {
   if (accessRole !== 'admin') return;
+  setAdminUsersTab('add');
   id('admin-user-name').value = username || '';
   id('admin-user-phone').value = phone;
   id('admin-user-role').value = role || 'viewer';
